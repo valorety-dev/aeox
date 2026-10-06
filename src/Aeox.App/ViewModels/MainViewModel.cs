@@ -20,7 +20,7 @@ public enum StatusKind
 public sealed class MainViewModel : Observable
 {
     private IReadOnlyList<PlannedChange> _plan = Array.Empty<PlannedChange>();
-    private string _page = "Performance";
+    private string _page = "Checkup";
     private StatusKind _status = StatusKind.Success;
     private string _statusTitle = string.Empty;
     private string _statusDetail = string.Empty;
@@ -38,6 +38,8 @@ public sealed class MainViewModel : Observable
         Pages = Array.Empty<PageViewModel>();
         Network = null!;
         BuildForGame(Settings.Game);
+        Checkup = new CheckupViewModel(() => Ctx, p => Page = p);
+        _ = Checkup.RunAsync();
 
         ApplyCommand = new RelayCommand(Apply, () => _plan.Count > 0);
         RestoreCommand = new RelayCommand(RestoreAll, () => Engine.Store.All.Count > 0);
@@ -50,6 +52,7 @@ public sealed class MainViewModel : Observable
     public ChangeEngine Engine { get; }
     public IReadOnlyList<PageViewModel> Pages { get; private set; }
     public NetworkViewModel Network { get; private set; }
+    public CheckupViewModel Checkup { get; }
 
     public bool IsRetrac
     {
@@ -112,6 +115,8 @@ public sealed class MainViewModel : Observable
             Raise(nameof(IsTweakPage));
             Raise(nameof(IsNetworkPage));
             Raise(nameof(IsSettingsPage));
+            Raise(nameof(IsCheckupPage));
+            if (value == "Checkup" && Checkup is { HasRun: true }) _ = Checkup.RunAsync();
         }
     }
 
@@ -119,6 +124,7 @@ public sealed class MainViewModel : Observable
     public bool IsTweakPage => CurrentPage is not null;
     public bool IsNetworkPage => Page == "Network";
     public bool IsSettingsPage => Page == "Settings";
+    public bool IsCheckupPage => Page == "Checkup";
 
     public StatusKind Status
     {

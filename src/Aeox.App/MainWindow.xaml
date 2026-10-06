@@ -20,6 +20,7 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <controls:PageIsConverter x:Key="PageIs" />
         <Style TargetType="ScrollBar" BasedOn="{StaticResource SlimScrollBar}" />
         <Style x:Key="SectionLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
@@ -108,13 +109,14 @@
             </Border>
 
             <StackPanel Grid.Row="3" Margin="12,0">
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE945;" Content="Performance" IsChecked="True" Checked="Nav_Checked" CommandParameter="Performance" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE7F4;" Content="Visuals" Checked="Nav_Checked" CommandParameter="Visuals" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE774;" Content="Network" Checked="Nav_Checked" CommandParameter="Network" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE950;" Content="System" Checked="Nav_Checked" CommandParameter="System" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE9F9;" Content="Checkup" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Checkup}" CommandParameter="Checkup" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE945;" Content="Performance" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Performance}" CommandParameter="Performance" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE7F4;" Content="Visuals" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Visuals}" CommandParameter="Visuals" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE774;" Content="Network" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Network}" CommandParameter="Network" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE950;" Content="System" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=System}" CommandParameter="System" />
             </StackPanel>
 
-            <RadioButton Grid.Row="4" Margin="12,0,12,16" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" Checked="Nav_Checked" CommandParameter="Settings" />
+            <RadioButton Grid.Row="4" Margin="12,0,12,16" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
         </Grid>
 
         <Grid Grid.Column="1">
@@ -126,6 +128,34 @@
                 </StackPanel>
             </ScrollViewer>
 
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsCheckupPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel MaxWidth="640" HorizontalAlignment="Left" DataContext="{Binding Checkup}">
+                    <TextBlock Text="Checkup" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Summary}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,22" />
+                    <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:CheckRow}">
+                                <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,15">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="22" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Width="7" Height="7" Fill="{Binding DotBrush}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,7,0,0" />
+                                        <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                            <TextBlock Text="{Binding Title}" FontSize="14" />
+                                            <TextBlock Text="{Binding Detail}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Style="{StaticResource GhostButton}" Height="28" Padding="12,0" FontSize="12" Content="{Binding FixText}" Command="{Binding FixCommand}" VerticalAlignment="Center" Visibility="{Binding HasFix, Converter={StaticResource BoolToVis}}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Style="{StaticResource GhostButton}" Content="Scan again" Command="{Binding RunCommand}" HorizontalAlignment="Left" Margin="0,20,0,0" />
+                </StackPanel>
+            </ScrollViewer>
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVis}}">
                 <StackPanel MaxWidth="640" HorizontalAlignment="Left">
                     <TextBlock Text="Settings" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />

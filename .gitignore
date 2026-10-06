@@ -485,3 +485,5 @@ $RECYCLE.BIN/
 
 # Aeox.App is a project folder, not a macOS bundle
 !**/Aeox.App/
+
+dist/

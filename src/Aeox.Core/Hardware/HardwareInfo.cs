@@ -61,7 +61,7 @@ public sealed record HardwareInfo(string CpuName, IReadOnlyList<string> Gpus, in
                 }
             }
         }
-        catch (ManagementException)
+        catch (Exception ex) when (ex is ManagementException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException)
         {
         }
         return new HardwareInfo(cpu.Trim(), gpus, refresh, width > 0 ? width : 1920, height > 0 ? height : 1080);

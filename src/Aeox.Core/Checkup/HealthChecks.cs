@@ -43,7 +43,7 @@ public static class HealthChecks
                 var r = check();
                 if (r is not null) results.Add(r);
             }
-            catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or System.Security.SecurityException or InvalidOperationException or IOException)
+            catch (Exception)
             {
             }
         }

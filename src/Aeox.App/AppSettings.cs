@@ -10,7 +10,7 @@ public sealed class AppSettings
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public GameKind Game { get; set; } = GameKind.Retrac;
-    public bool StartWithWindows { get; set; } = true;
+    public bool StartWithWindows { get; set; }
     public bool CloseToTray { get; set; } = true;
     public bool AutoReapply { get; set; } = true;
     public bool SessionReports { get; set; } = true;

@@ -14,7 +14,12 @@
     <AssemblyName>Aeox</AssemblyName>
     <RootNamespace>Aeox.App</RootNamespace>
     <Product>Aeox</Product>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Authors>Valorety</Authors>
+    <Company>Valorety</Company>
+    <Copyright>Valorety</Copyright>
+    <Description>FPS tweaker for Fortnite and Retrac</Description>
     <ApplicationIcon>Assets\aeox.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -27,7 +32,7 @@
     <Resource Include="Assets\logo.png" />
     <Resource Include="Assets\aeox.ico" />
     <Resource Include="Assets\Fonts\Michroma-Regular.ttf" />
-    <None Include="Assets\Fonts\Michroma-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Resource Include="Assets\Fonts\Michroma-OFL.txt" />
   </ItemGroup>
 
 </Project>

@@ -21,6 +21,19 @@ public partial class App : Application
         }
 
         base.OnStartup(e);
+        DispatcherUnhandledException += (_, args) =>
+        {
+            LogError(args.Exception);
+            MessageBox.Show($"Aeox hit an error and skipped that action.\n\n{args.Exception.Message}\n\nDetails are in {ErrorLogPath}",
+                "Aeox", MessageBoxButton.OK, MessageBoxImage.Warning);
+            args.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => LogError(args.ExceptionObject as Exception);
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            LogError(args.Exception);
+            args.SetObserved();
+        };
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         var window = new MainWindow();
         MainWindow = window;
@@ -35,6 +48,21 @@ public partial class App : Application
             }
         }) { IsBackground = true };
         listener.Start();
+    }
+
+    private static string ErrorLogPath => System.IO.Path.Combine(Aeox.Core.Tweaks.AeoxContext.DefaultDataDir(), "error.log");
+
+    private static void LogError(Exception? ex)
+    {
+        if (ex is null) return;
+        try
+        {
+            System.IO.Directory.CreateDirectory(Aeox.Core.Tweaks.AeoxContext.DefaultDataDir());
+            System.IO.File.AppendAllText(ErrorLogPath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}  {ex}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch (System.IO.IOException)
+        {
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)

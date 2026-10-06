@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Aeox.App is a project folder, not a macOS bundle
+!**/Aeox.App/

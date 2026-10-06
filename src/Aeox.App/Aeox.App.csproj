@@ -20,6 +20,8 @@
   <ItemGroup>
     <Resource Include="Assets\logo.png" />
     <Resource Include="Assets\aeox.ico" />
+    <Resource Include="Assets\Fonts\Michroma-Regular.ttf" />
+    <None Include="Assets\Fonts\Michroma-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

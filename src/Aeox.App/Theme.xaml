@@ -32,6 +32,7 @@
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+    <FontFamily x:Key="BrandFont">pack://application:,,,/Assets/Fonts/#Michroma</FontFamily>
     <FontFamily x:Key="CodeFont">Cascadia Mono, Consolas</FontFamily>
 
     <Style x:Key="ToggleSwitch" TargetType="ToggleButton">

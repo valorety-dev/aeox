@@ -45,7 +45,7 @@
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="24,6,16,30">
                 <Image Source="Assets/logo.png" Width="26" Height="26" RenderOptions.BitmapScalingMode="HighQuality" />
-                <TextBlock Text="A&#x2009;E&#x2009;O&#x2009;X" FontFamily="Bahnschrift" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,1,0,0" />
+                <TextBlock Text="A&#x200A;E&#x200A;O&#x200A;X" FontFamily="{StaticResource BrandFont}" FontSize="14" VerticalAlignment="Center" Margin="12,1,0,0" />
             </StackPanel>
 
             <StackPanel Grid.Row="2" Margin="12,0">

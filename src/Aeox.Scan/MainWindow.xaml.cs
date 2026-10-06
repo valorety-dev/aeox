@@ -79,7 +79,7 @@ public partial class MainWindow : Window
     {
         if (!_pageReady) return;
         RescanButton.IsEnabled = false;
-        StatusText.Text = "scanning…";
+        StatusText.Text = "scanning...";
         var result = await Task.Run(() => SystemScan.Run(AeoxContext.DefaultDataDir()));
         var payload = JsonSerializer.Serialize(new { type = "scan", data = result }, Json);
         View.CoreWebView2.PostWebMessageAsJson(payload);

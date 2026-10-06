@@ -87,9 +87,9 @@ public sealed class MainViewModel : Observable
         Ctx = new AeoxContext(GameProfile.For(kind), _hardware, AeoxContext.DefaultDataDir());
         Pages = new[]
         {
-            BuildPage(TweakCategory.Performance, "Performance", "More FPS, less delay."),
-            BuildPage(TweakCategory.Visuals, "Visuals", "How the game is displayed."),
-            BuildPage(TweakCategory.System, "System", "Windows settings that affect the game.")
+            BuildPage(TweakCategory.Performance, "Performance", "03", "more fps, less delay."),
+            BuildPage(TweakCategory.Visuals, "Visuals", "04", "how the game is displayed."),
+            BuildPage(TweakCategory.System, "System", "06", "windows settings that affect the game.")
         };
         Network = new NetworkViewModel(Ctx);
         Raise(nameof(Ctx));
@@ -161,14 +161,14 @@ public sealed class MainViewModel : Observable
         ? "Nothing changed yet."
         : $"{Engine.Store.All.Count} original values saved. Restore puts every one of them back.";
 
-    private PageViewModel BuildPage(TweakCategory category, string title, string subtitle)
+    private PageViewModel BuildPage(TweakCategory category, string title, string number, string subtitle)
     {
         var items = new List<object>();
         items.AddRange(TweakCatalog.ChoicesFor(category).Where(c => c.IsSupported(Ctx)).Select(c => new ChoiceItem(c, Ctx, Engine, OnItemChanged)));
         items.AddRange(TweakCatalog.For(category)
             .Where(t => t.IsSupported(Ctx))
             .Select(t => new TweakItem(t, Ctx, Engine.IsApplied(t.Changes(Ctx)), OnItemChanged)));
-        return new PageViewModel(title, title, subtitle, items);
+        return new PageViewModel(title, number, title.ToLowerInvariant(), subtitle, items);
     }
 
     private void OnItemChanged()

@@ -98,15 +98,17 @@ public sealed class ChoiceItem : Observable, ISettingItem
 
 public sealed class PageViewModel
 {
-    public PageViewModel(string key, string title, string subtitle, IEnumerable<object> items)
+    public PageViewModel(string key, string number, string title, string subtitle, IEnumerable<object> items)
     {
         Key = key;
+        Number = number;
         Title = title;
         Subtitle = subtitle;
         Items = new ObservableCollection<object>(items);
     }
 
     public string Key { get; }
+    public string Number { get; }
     public string Title { get; }
     public string Subtitle { get; }
     public ObservableCollection<object> Items { get; }

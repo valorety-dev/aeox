@@ -124,7 +124,7 @@ public sealed class StatsViewModel : Observable
                 $"{m.AvgFps:0} fps",
                 $"{m.HitchesPerMin:0.0} hitches/min",
                 m.PingMs is null ? "-" : $"{m.PingMs:0} ms",
-                m.Bottleneck == "unknown" ? "" : m.Bottleneck));
+                m.Bottleneck switch { "CPU" => "cpu", "GPU" => "gpu", "balanced" => "even", _ => "" }));
         }
     }
 }

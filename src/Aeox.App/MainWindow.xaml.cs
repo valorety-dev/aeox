@@ -90,7 +90,7 @@ public partial class MainWindow : Window
         var hwnd = new WindowInteropHelper(this).Handle;
         var dark = 1;
         DwmSetWindowAttribute(hwnd, 20, ref dark, sizeof(int));
-        var round = 2;
+        var round = 1;
         DwmSetWindowAttribute(hwnd, 33, ref round, sizeof(int));
     }
 

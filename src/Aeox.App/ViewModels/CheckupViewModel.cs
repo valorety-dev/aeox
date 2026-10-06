@@ -18,7 +18,13 @@ public sealed class CheckRow
     public string Title => Result.Title;
     public string Detail => Result.Detail;
     public bool HasFix => Result.FixPage is not null && Result.Status == CheckStatus.Warn;
-    public string FixText => $"Open {Result.FixPage}";
+    public string FixText => $"open {Result.FixPage?.ToLowerInvariant()}";
+    public string Tag => Result.Status switch
+    {
+        CheckStatus.Good => "[ok]",
+        CheckStatus.Warn => "[fix]",
+        _ => "[i]"
+    };
     public ICommand FixCommand { get; }
 
     public Brush DotBrush => (Brush)System.Windows.Application.Current.Resources[Result.Status switch

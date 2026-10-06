@@ -10,6 +10,7 @@
         WindowStyle="None" ResizeMode="CanResize"
         Background="{StaticResource WindowBrush}"
         FontFamily="{StaticResource UiFont}"
+        FontSize="13"
         Foreground="{StaticResource TextBrush}"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display">
@@ -22,281 +23,313 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <controls:PageIsConverter x:Key="PageIs" />
         <Style TargetType="ScrollBar" BasedOn="{StaticResource SlimScrollBar}" />
+
         <Style x:Key="SectionLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
         </Style>
 
+        <Style x:Key="PageScroll" TargetType="ScrollViewer">
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="Padding" Value="0,0,0,32" />
+        </Style>
+
+        <Style x:Key="Row" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="0,14" />
+        </Style>
+
         <DataTemplate DataType="{x:Type vm:TweakItem}">
-            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,17">
+            <Border Style="{StaticResource Row}">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="36" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="Icon" Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource FaintBrush}" />
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,24,0">
-                        <TextBlock Text="{Binding Title}" FontSize="14" />
-                        <TextBlock Text="{Binding Description}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                        <TextBlock x:Name="Name" Text="{Binding Title}" />
+                        <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
-                    <ToggleButton Grid.Column="2" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsOn, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Title}" />
+                    <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsOn, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Title}" />
                 </Grid>
             </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsOn}" Value="True">
-                    <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource AccentSoftBrush}" />
+                    <Setter TargetName="Name" Property="FontWeight" Value="Bold" />
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
         <DataTemplate DataType="{x:Type vm:ChoiceItem}">
-            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,17">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="36" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="16" VerticalAlignment="Top" Margin="0,2,0,0" Foreground="{StaticResource FaintBrush}" />
-                    <StackPanel Grid.Column="1">
-                        <TextBlock Text="{Binding Title}" FontSize="14" />
-                        <TextBlock Text="{Binding Description}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-                        <ItemsControl ItemsSource="{Binding Options}" Margin="0,12,0,0" Focusable="False">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:ChoiceOptionItem}">
-                                    <RadioButton Style="{StaticResource Pill}" Content="{Binding Label}" GroupName="{Binding GroupName}" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Grid>
+            <Border Style="{StaticResource Row}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" />
+                    <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                    <ItemsControl ItemsSource="{Binding Options}" Margin="0,10,0,0" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ChoiceOptionItem}">
+                                <RadioButton Style="{StaticResource Pill}" Content="{Binding Label}" GroupName="{Binding GroupName}" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </Border>
         </DataTemplate>
     </Window.Resources>
 
     <Grid x:Name="Root">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="208" />
+            <ColumnDefinition Width="220" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="400" />
         </Grid.ColumnDefinitions>
 
-        <Grid Grid.Column="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="40" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <Border Grid.Column="0" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="52" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="22,4,12,22">
-                <Image Source="Assets/logo.png" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
-                <TextBlock Text="A&#x200A;&#x200A;E&#x200A;&#x200A;O&#x200A;&#x200A;X" FontFamily="{StaticResource BrandFont}" FontSize="18" VerticalAlignment="Center" Margin="13,2,0,0" />
-            </StackPanel>
+                <Border Grid.Row="0" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+                    <TextBlock Text="A&#x200A;E&#x200A;O&#x200A;X" FontFamily="{StaticResource BrandFont}" FontSize="14" VerticalAlignment="Center" Margin="24,0,0,0" />
+                </Border>
 
-            <Border Grid.Row="2" Margin="12,0,12,22" Padding="3" CornerRadius="10" Background="#10121B" BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
-                <UniformGrid Columns="2">
-                    <RadioButton Style="{StaticResource Segment}" GroupName="Game" Content="Retrac" IsChecked="{Binding IsRetrac, Mode=TwoWay}" />
-                    <RadioButton Style="{StaticResource Segment}" GroupName="Game" Content="Fortnite" IsChecked="{Binding IsFortnite, Mode=TwoWay}" />
-                </UniformGrid>
-            </Border>
+                <StackPanel Grid.Row="1" Margin="24,22,20,20">
+                    <TextBlock Text="game" Style="{StaticResource SectionLabel}" Margin="0,0,0,8" />
+                    <UniformGrid Columns="2">
+                        <RadioButton Style="{StaticResource Segment}" GroupName="Game" Content="retrac" IsChecked="{Binding IsRetrac, Mode=TwoWay}" />
+                        <RadioButton Style="{StaticResource Segment}" GroupName="Game" Content="fortnite" IsChecked="{Binding IsFortnite, Mode=TwoWay}" Margin="-1,0,0,0" />
+                    </UniformGrid>
+                </StackPanel>
 
-            <StackPanel Grid.Row="3" Margin="12,0">
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE9F9;" Content="Checkup" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Checkup}" CommandParameter="Checkup" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE9D2;" Content="Stats" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Stats}" CommandParameter="Stats" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE945;" Content="Performance" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Performance}" CommandParameter="Performance" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE7F4;" Content="Visuals" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Visuals}" CommandParameter="Visuals" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE774;" Content="Network" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Network}" CommandParameter="Network" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE950;" Content="System" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=System}" CommandParameter="System" />
-            </StackPanel>
+                <StackPanel Grid.Row="2" Margin="12,0">
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="01" Content="checkup" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Checkup}" CommandParameter="Checkup" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="02" Content="stats" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Stats}" CommandParameter="Stats" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="03" Content="performance" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Performance}" CommandParameter="Performance" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="04" Content="visuals" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Visuals}" CommandParameter="Visuals" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="05" Content="network" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Network}" CommandParameter="Network" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="06" Content="system" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=System}" CommandParameter="System" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="07" Content="settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
+                </StackPanel>
 
-            <RadioButton Grid.Row="4" Margin="12,0,12,4" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
-            <TextBlock Grid.Row="5" Text="made by Valorety" FontSize="11" Foreground="{StaticResource FaintBrush}" Margin="24,0,0,18" />
-        </Grid>
+                <Border Grid.Row="4" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="24,14">
+                    <TextBlock Text="made by valorety" FontSize="11.5" Foreground="{StaticResource FaintBrush}" />
+                </Border>
+            </Grid>
+        </Border>
 
         <Grid Grid.Column="1">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsTweakPage, Converter={StaticResource BoolToVis}}">
-                <StackPanel MaxWidth="640" HorizontalAlignment="Left" DataContext="{Binding CurrentPage}">
-                    <TextBlock Text="{Binding Title}" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Subtitle}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,28" />
-                    <ItemsControl ItemsSource="{Binding Items}" Focusable="False" />
+            <Grid.RowDefinitions>
+                <RowDefinition Height="52" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" />
+
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsTweakPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel DataContext="{Binding CurrentPage}">
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock>
+                                <Run Text="{Binding Number, Mode=OneWay}" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="{Binding Title, Mode=OneWay}" FontWeight="Bold" />
+                            </TextBlock>
+                            <TextBlock Text="{Binding Subtitle}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding Items}" Focusable="False" Margin="36,4,36,0" MaxWidth="680" HorizontalAlignment="Left" />
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsCheckupPage, Converter={StaticResource BoolToVis}}">
-                <StackPanel MaxWidth="640" HorizontalAlignment="Left" DataContext="{Binding Checkup}">
-                    <TextBlock Text="Checkup" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Summary}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,22" />
-                    <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:CheckRow}">
-                                <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,15">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Ellipse Width="7" Height="7" Fill="{Binding DotBrush}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,7,0,0" />
-                                        <StackPanel Grid.Column="1" Margin="0,0,16,0">
-                                            <TextBlock Text="{Binding Title}" FontSize="14" />
-                                            <TextBlock Text="{Binding Detail}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                        <Button Grid.Column="2" Style="{StaticResource GhostButton}" Height="28" Padding="12,0" FontSize="12" Content="{Binding FixText}" Command="{Binding FixCommand}" VerticalAlignment="Center" Visibility="{Binding HasFix, Converter={StaticResource BoolToVis}}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Button Style="{StaticResource GhostButton}" Content="Scan again" Command="{Binding RunCommand}" HorizontalAlignment="Left" Margin="0,20,0,0" />
-                </StackPanel>
-            </ScrollViewer>
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsStatsPage, Converter={StaticResource BoolToVis}}">
-                <StackPanel MaxWidth="640" HorizontalAlignment="Left" DataContext="{Binding Stats}">
-                    <TextBlock Text="Stats" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Headline}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,24" TextWrapping="Wrap" />
-                    <controls:FpsChart Height="150" Values="{Binding Values}" Marks="{Binding Marks}" />
-                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                        <Border Width="9" Height="9" CornerRadius="2" Background="{StaticResource AccentBrush}" VerticalAlignment="Center" />
-                        <TextBlock Text="FPS per match" FontSize="11.5" Foreground="{StaticResource FaintBrush}" Margin="7,0,18,0" />
-                        <Rectangle Width="10" Height="1" Stroke="{StaticResource AccentSoftBrush}" StrokeDashArray="2 2" VerticalAlignment="Center" />
-                        <TextBlock Text="you applied a change" FontSize="11.5" Foreground="{StaticResource FaintBrush}" Margin="7,0,0,0" />
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsCheckupPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel DataContext="{Binding Checkup}">
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock><Run Text="01" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="checkup" FontWeight="Bold" /></TextBlock>
+                            <TextBlock Text="{Binding Summary}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Margin="36,4,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:CheckRow}">
+                                    <Border Style="{StaticResource Row}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="58" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Tag}" Foreground="{Binding DotBrush}" FontWeight="Bold" />
+                                            <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                                <TextBlock Text="{Binding Title}" />
+                                                <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Style="{StaticResource GhostButton}" Height="26" Padding="10,0" FontSize="12" Content="{Binding FixText}" Command="{Binding FixCommand}" VerticalAlignment="Center" Visibility="{Binding HasFix, Converter={StaticResource BoolToVis}}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Style="{StaticResource GhostButton}" Content="scan again" Command="{Binding RunCommand}" HorizontalAlignment="Left" Margin="0,20,0,0" />
                     </StackPanel>
-                    <TextBlock Text="{Binding Compare}" FontSize="13.5" Margin="0,24,0,0" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding Bottleneck}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
-                    <TextBlock Text="RECENT MATCHES" Style="{StaticResource SectionLabel}" Margin="0,30,0,4" />
-                    <ItemsControl ItemsSource="{Binding Recent}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:MatchRow}">
-                                <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,10">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="170" />
-                                            <ColumnDefinition Width="90" />
-                                            <ColumnDefinition Width="150" />
-                                            <ColumnDefinition Width="70" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding When}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Fps}" FontSize="12.5" />
-                                        <TextBlock Grid.Column="2" Text="{Binding Stutter}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
-                                        <TextBlock Grid.Column="3" Text="{Binding Ping}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" />
-                                        <TextBlock Grid.Column="4" Text="{Binding Limit}" FontSize="12.5" Foreground="{StaticResource FaintBrush}" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVis}}">
-                <StackPanel MaxWidth="640" HorizontalAlignment="Left">
-                    <TextBlock Text="Settings" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="Hardware, locations and undo." FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,32" />
-
-                    <TextBlock Text="GAME" Style="{StaticResource SectionLabel}" />
-                    <TextBlock Text="{Binding GameText}" FontSize="13.5" Margin="0,10,0,30" TextWrapping="Wrap" />
-
-                    <TextBlock Text="HARDWARE" Style="{StaticResource SectionLabel}" />
-                    <TextBlock Text="{Binding CpuText}" FontSize="13.5" Margin="0,10,0,0" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding GpuText}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding DisplayText}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
-
-                    <TextBlock Text="LOCATIONS" Style="{StaticResource SectionLabel}" Margin="0,30,0,0" />
-                    <TextBlock Text="{Binding ConfigText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding DataText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" TextWrapping="Wrap" />
-
-                    <TextBlock Text="AUTO MODE" Style="{StaticResource SectionLabel}" Margin="0,30,0,2" />
-                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,13">
-                        <DockPanel>
-                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding StartWithWindows, Mode=TwoWay}" AutomationProperties.Name="Start with Windows" />
-                            <StackPanel>
-                                <TextBlock Text="Start with Windows" FontSize="14" />
-                                <TextBlock Text="Runs quietly in the tray." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,13">
-                        <DockPanel>
-                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding CloseToTray, Mode=TwoWay}" AutomationProperties.Name="Keep running when closed" />
-                            <StackPanel>
-                                <TextBlock Text="Keep running when closed" FontSize="14" />
-                                <TextBlock Text="The close button sends Aeox to the tray." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,13">
-                        <DockPanel>
-                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding AutoReapply, Mode=TwoWay}" AutomationProperties.Name="Fix settings that get reset" />
-                            <StackPanel>
-                                <TextBlock Text="Fix settings that get reset" FontSize="14" />
-                                <TextBlock Text="Puts your applied settings back if the game, a launcher or a driver changes them." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,13">
-                        <DockPanel>
-                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding SessionReports, Mode=TwoWay}" AutomationProperties.Name="Session summary" />
-                            <StackPanel>
-                                <TextBlock Text="Session summary" FontSize="14" />
-                                <TextBlock Text="After you close the game: FPS, ping, and a warning if it crashed." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-
-                    <TextBlock Text="UNDO" Style="{StaticResource SectionLabel}" Margin="0,30,0,0" />
-                    <TextBlock Text="{Binding BackupText}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
-                    <Button Style="{StaticResource GhostButton}" Content="Restore everything" Command="{Binding RestoreCommand}" HorizontalAlignment="Left" Margin="0,16,0,0" />
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsNetworkPage, Converter={StaticResource BoolToVis}}">
-                <StackPanel MaxWidth="640" HorizontalAlignment="Left" DataContext="{Binding Network}">
-                    <TextBlock Text="Network" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="Find out where lag actually comes from." FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,32" />
-
-                    <TextBlock Text="CONNECTION" Style="{StaticResource SectionLabel}" />
-                    <TextBlock Text="{Binding ConnectionText}" FontSize="13.5" Margin="0,10,0,0" TextWrapping="Wrap" />
-
-                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,24,0,17" Margin="0,8,0,0">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="36" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="&#xE839;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="{StaticResource FaintBrush}" Margin="0,2,0,0" />
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="Your router" FontSize="14" />
-                                <TextBlock Text="{Binding RouterText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Grid>
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsStatsPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel DataContext="{Binding Stats}">
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock><Run Text="02" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="stats" FontWeight="Bold" /></TextBlock>
+                            <TextBlock Text="{Binding Headline}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
                     </Border>
+                    <StackPanel Margin="36,24,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <controls:FpsChart Height="150" Values="{Binding Values}" Marks="{Binding Marks}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Rectangle Width="8" Height="8" Fill="{StaticResource TextBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="fps per match" FontSize="11.5" Foreground="{StaticResource FaintBrush}" Margin="7,0,18,0" />
+                            <Rectangle Width="10" Height="1" Stroke="{StaticResource AccentBrush}" StrokeDashArray="2 2" VerticalAlignment="Center" />
+                            <TextBlock Text="you applied a change" FontSize="11.5" Foreground="{StaticResource FaintBrush}" Margin="7,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Compare}" Margin="0,24,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Bottleneck}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="recent matches" Style="{StaticResource SectionLabel}" Margin="0,30,0,4" />
+                        <ItemsControl ItemsSource="{Binding Recent}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:MatchRow}">
+                                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,9">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150" />
+                                                <ColumnDefinition Width="76" />
+                                                <ColumnDefinition Width="150" />
+                                                <ColumnDefinition Width="60" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding When}" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Fps}" FontSize="12" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Stutter}" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+                                            <TextBlock Grid.Column="3" Text="{Binding Ping}" FontSize="12" Foreground="{StaticResource MutedBrush}" />
+                                            <TextBlock Grid.Column="4" Text="{Binding Limit}" FontSize="12" Foreground="{StaticResource FaintBrush}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
 
-                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,17">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="36" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="&#xE774;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="{StaticResource FaintBrush}" Margin="0,2,0,0" />
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="{Binding ServerLabel}" FontSize="14" />
-                                <TextBlock Text="{Binding ServerText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Grid>
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsNetworkPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel DataContext="{Binding Network}">
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock><Run Text="05" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="network" FontWeight="Bold" /></TextBlock>
+                            <TextBlock Text="where lag actually comes from." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
+                        </StackPanel>
                     </Border>
+                    <StackPanel Margin="36,24,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <TextBlock Text="connection" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding ConnectionText}" Margin="0,8,0,10" TextWrapping="Wrap" />
+                        <Border Style="{StaticResource Row}" BorderThickness="0,1,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="your router" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock Grid.Column="1" Text="{Binding RouterText}" FontSize="12" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource Row}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding ServerLabel}" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,0,12,0" />
+                                <TextBlock Grid.Column="1" Text="{Binding ServerText}" FontSize="12" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="{Binding Verdict}" Margin="0,22,0,0" TextWrapping="Wrap" />
+                        <Button Style="{StaticResource GhostButton}" Content="{Binding ButtonText}" Command="{Binding RunCommand}" HorizontalAlignment="Left" Margin="0,18,0,0" />
+                        <TextBlock Text="30 pings each. registry &quot;network tweaks&quot; do nothing for fortnite, so aeox doesn't ship any." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,18,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
 
-                    <TextBlock Text="{Binding Verdict}" FontSize="13.5" Margin="0,22,0,0" TextWrapping="Wrap" />
-                    <Button Style="{StaticResource GhostButton}" Content="{Binding ButtonText}" Command="{Binding RunCommand}" HorizontalAlignment="Left" Margin="0,18,0,0" />
-                    <TextBlock Text="Sends 30 pings to each. Registry “network tweaks” do nothing for Fortnite, so Aeox does not ship any." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,18,0,0" TextWrapping="Wrap" />
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock><Run Text="07" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="settings" FontWeight="Bold" /></TextBlock>
+                            <TextBlock Text="hardware, locations, auto mode and undo." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Margin="36,24,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <TextBlock Text="game" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding GameText}" Margin="0,8,0,26" TextWrapping="Wrap" />
+
+                        <TextBlock Text="hardware" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding CpuText}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding GpuText}" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding DisplayText}" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,26" TextWrapping="Wrap" />
+
+                        <TextBlock Text="locations" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding ConfigText}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding DataText}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,26" TextWrapping="Wrap" />
+
+                        <TextBlock Text="auto mode" Style="{StaticResource SectionLabel}" Margin="0,0,0,2" />
+                        <Border Style="{StaticResource Row}">
+                            <DockPanel>
+                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding StartWithWindows, Mode=TwoWay}" AutomationProperties.Name="Start with Windows" />
+                                <StackPanel>
+                                    <TextBlock Text="start with windows" />
+                                    <TextBlock Text="runs quietly in the tray." FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource Row}">
+                            <DockPanel>
+                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding CloseToTray, Mode=TwoWay}" AutomationProperties.Name="Keep running when closed" />
+                                <StackPanel>
+                                    <TextBlock Text="keep running when closed" />
+                                    <TextBlock Text="the close button sends aeox to the tray." FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource Row}">
+                            <DockPanel>
+                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding AutoReapply, Mode=TwoWay}" AutomationProperties.Name="Fix settings that get reset" />
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="fix settings that get reset" />
+                                    <TextBlock Text="puts your applied settings back if the game, a launcher or a driver changes them." FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource Row}">
+                            <DockPanel>
+                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding SessionReports, Mode=TwoWay}" AutomationProperties.Name="Session summary" />
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="session summary" />
+                                    <TextBlock Text="after you close the game: fps, ping, and a warning if it crashed." FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock Text="undo" Style="{StaticResource SectionLabel}" Margin="0,26,0,0" />
+                        <TextBlock Text="{Binding BackupText}" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <Button Style="{StaticResource GhostButton}" Content="restore everything" Command="{Binding RestoreCommand}" HorizontalAlignment="Left" Margin="0,14,0,0" />
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </Grid>
@@ -304,35 +337,36 @@
         <Border Grid.Column="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1,0,0,0">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="40" />
-                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="52" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
-                    <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Minimize" />
-                    <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="Maximize_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Maximize" />
-                    <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;" Click="Close_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Close" />
-                </StackPanel>
+                <Border Grid.Row="0" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0,0,0">
+                            <TextBlock Text="preview" FontWeight="Bold" />
+                            <TextBlock Text="  ·  live" Foreground="{StaticResource FaintBrush}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                            <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Minimize" />
+                            <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="Maximize_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Maximize" />
+                            <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;" Click="Close_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Close" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
 
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="28,12,28,0">
-                    <TextBlock Text="PREVIEW" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" />
-                    <Ellipse Width="6" Height="6" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="10,0,0,0" />
-                    <TextBlock Text="live" FontSize="11" Foreground="{StaticResource FaintBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
-                </StackPanel>
-
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="16,18,20,18">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="12,18,20,18">
                     <ItemsControl ItemsSource="{Binding Preview}" Focusable="False">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:PreviewLine}">
                                 <Grid x:Name="LineRoot" Margin="0,1.5">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="22" />
+                                        <ColumnDefinition Width="24" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Number}" FontFamily="{StaticResource CodeFont}" FontSize="11.5" Foreground="#363A4C" HorizontalAlignment="Right" />
-                                    <TextBlock Grid.Column="1" Margin="14,0,0,0" FontFamily="{StaticResource CodeFont}" FontSize="12" TextWrapping="Wrap" controls:TokenText.Tokens="{Binding Tokens}" />
+                                    <TextBlock Text="{Binding Number}" FontSize="11.5" Foreground="#3A3936" HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="1" Margin="14,0,0,0" FontSize="12" TextWrapping="Wrap" controls:TokenText.Tokens="{Binding Tokens}" />
                                 </Grid>
                                 <DataTemplate.Triggers>
                                     <DataTrigger Binding="{Binding GapBefore}" Value="True">
@@ -344,7 +378,7 @@
                     </ItemsControl>
                 </ScrollViewer>
 
-                <Border Grid.Row="3" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="28,18,28,22">
+                <Border Grid.Row="2" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="24,16,24,20">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -352,13 +386,13 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+                                <Rectangle x:Name="StatusDot" Width="7" Height="7" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
                                 <TextBlock x:Name="StatusGlyph" Visibility="Collapsed" />
-                                <TextBlock x:Name="StatusTitleText" Text="{Binding StatusTitle}" FontSize="13" FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="StatusTitleText" Text="{Binding StatusTitle}" FontWeight="Bold" Margin="9,0,0,0" VerticalAlignment="Center" />
                             </StackPanel>
                             <TextBlock Text="{Binding StatusDetail}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="16,4,12,0" TextWrapping="Wrap" />
                         </StackPanel>
-                        <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="Apply" Command="{Binding ApplyCommand}" VerticalAlignment="Center" Visibility="{Binding HasPending, Converter={StaticResource BoolToVis}}" />
+                        <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="apply" Command="{Binding ApplyCommand}" VerticalAlignment="Center" Visibility="{Binding HasPending, Converter={StaticResource BoolToVis}}" />
                     </Grid>
                 </Border>
             </Grid>

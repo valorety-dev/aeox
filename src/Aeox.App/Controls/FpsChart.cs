@@ -35,6 +35,7 @@ public sealed class FpsChart : FrameworkElement
         var line = (Brush)FindResource("LineBrush");
         var faint = (Brush)FindResource("FaintBrush");
         var accent = (SolidColorBrush)FindResource("AccentBrush");
+        var ink = (SolidColorBrush)FindResource("TextBrush");
         var soft = (Brush)FindResource("AccentSoftBrush");
         var typeface = new Typeface((FontFamily)FindResource("UiFont"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
         var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
@@ -54,17 +55,24 @@ public sealed class FpsChart : FrameworkElement
         var max = Math.Max(values.Max() * 1.08, 60);
         var slot = w / values.Count;
         var barW = Math.Max(2, Math.Min(18, slot * 0.62));
+        Rect? labelRect = null;
+        FormattedText? labelText = null;
+        var labelPoint = new Point();
         var gridValue = Math.Round(max / 2 / 50) * 50;
         if (gridValue > 0)
         {
             var gy = bottom - (bottom - top) * gridValue / max;
             dc.DrawRectangle(line, null, new Rect(0, gy, w, 1));
             var label = new FormattedText($"{gridValue:0} fps", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, 10.5, faint, dpi);
-            dc.DrawText(label, new Point(w - label.Width, gy - label.Height - 2));
+            var lp = new Point(w - label.Width - 4, gy - label.Height / 2);
+            dc.DrawRectangle((Brush)FindResource("WindowBrush"), null, new Rect(lp.X - 6, lp.Y - 1, label.Width + 10, label.Height + 2));
+            labelRect = new Rect(lp.X - 6, lp.Y - 1, label.Width + 10, label.Height + 2);
+            labelText = label;
+            labelPoint = lp;
         }
 
         var marks = Marks ?? Array.Empty<int>();
-        var dashed = new Pen(soft, 1) { DashStyle = new DashStyle(new double[] { 3, 3 }, 0) };
+        var dashed = new Pen(accent, 1) { DashStyle = new DashStyle(new double[] { 3, 3 }, 0) };
         foreach (var m in marks)
         {
             if (m <= 0 || m >= values.Count) continue;
@@ -72,14 +80,20 @@ public sealed class FpsChart : FrameworkElement
             dc.DrawLine(dashed, new Point(x, top - 4), new Point(x, bottom));
         }
 
-        var dim = new SolidColorBrush(Color.FromArgb(150, accent.Color.R, accent.Color.G, accent.Color.B));
+        var dim = new SolidColorBrush(Color.FromArgb(120, ink.Color.R, ink.Color.G, ink.Color.B));
         dim.Freeze();
         for (var i = 0; i < values.Count; i++)
         {
             var barH = Math.Max(2, (bottom - top) * values[i] / max);
             var x = i * slot + (slot - barW) / 2;
             var brush = i == values.Count - 1 ? accent : dim;
-            dc.DrawRoundedRectangle(brush, null, new Rect(x, bottom - barH, barW, barH), 2, 2);
+            dc.DrawRectangle(brush, null, new Rect(x, bottom - barH, barW, barH));
+        }
+
+        if (labelRect is { } lr && labelText is not null)
+        {
+            dc.DrawRectangle((Brush)FindResource("WindowBrush"), null, lr);
+            dc.DrawText(labelText, labelPoint);
         }
     }
 }

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>aeox scan</title>
+  <link rel="stylesheet" href="scan.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/three.module.min.js",
+        "three/addons/": "./vendor/three/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="labels"></div>
+
+  <section class="head">
+    <p class="num"><span>01</span> scan</p>
+    <p class="verdict" id="verdict">scanning your pc…</p>
+    <p class="sub" id="sub"></p>
+  </section>
+
+  <aside class="parts">
+    <ul id="parts"></ul>
+    <p class="legend"><b class="k-limit">bottleneck</b> the part holding your fps back right now<br><b class="k-warn">weak</b> not the bottleneck, but worth fixing<br><b class="k-ok">ok</b> not slowing you down</p>
+  </aside>
+
+  <section class="detail" id="detail" hidden>
+    <p class="detail-kind" id="detailKind"></p>
+    <p class="detail-title" id="detailTitle"></p>
+    <p class="detail-line" id="detailLine"></p>
+    <p class="detail-note" id="detailNote"></p>
+  </section>
+
+  <script type="module" src="scan.js"></script>
+</body>
+</html>

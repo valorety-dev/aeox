@@ -25,6 +25,7 @@
     <Copyright>Valorety</Copyright>
     <Description>3D view of your PC and what holds it back</Description>
     <ApplicationIcon>aeox.ico</ApplicationIcon>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>

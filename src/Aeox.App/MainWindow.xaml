@@ -94,6 +94,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="22,4,12,22">
@@ -117,7 +118,8 @@
                 <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE950;" Content="System" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=System}" CommandParameter="System" />
             </StackPanel>
 
-            <RadioButton Grid.Row="4" Margin="12,0,12,16" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
+            <RadioButton Grid.Row="4" Margin="12,0,12,4" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
+            <TextBlock Grid.Row="5" Text="made by Valorety" FontSize="11" Foreground="{StaticResource FaintBrush}" Margin="24,0,0,18" />
         </Grid>
 
         <Grid Grid.Column="1">

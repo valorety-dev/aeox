@@ -98,7 +98,7 @@ public sealed class StatsViewModel : Observable
 
         var cmp = _history.CompareAroundLastApply();
         Compare = cmp is { } c
-            ? $"Before your last change {c.Before:0} FPS  →  after {c.After:0} FPS  ({(c.After - c.Before) / c.Before * 100:+0;-0}%, {c.AfterCount} match{(c.AfterCount == 1 ? "" : "es")} since)"
+            ? $"Before your last change {c.Before:0} FPS -> after {c.After:0} FPS  ({(c.After - c.Before) / c.Before * 100:+0;-0}%, {c.AfterCount} match{(c.AfterCount == 1 ? "" : "es")} since)"
             : _history.Data.Applies.Count > 0
                 ? "Play a match to see the effect of your last change."
                 : "Apply a change and play a few matches to see before and after here.";

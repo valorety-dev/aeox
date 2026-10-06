@@ -412,7 +412,7 @@ public sealed class MainViewModel : Observable
                             new PreviewToken($"{first.Target}", TokenKind.String));
                         foreach (var p in byTarget)
                         {
-                            var name = p.Change.Key.Length > 34 ? "…" + p.Change.Key[^33..] : p.Change.Key;
+                            var name = p.Change.Key.Length > 34 ? "..." + p.Change.Key[^33..] : p.Change.Key;
                             if (p.NewValue is null)
                             {
                                 Add(false,

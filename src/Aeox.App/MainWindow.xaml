@@ -43,9 +43,9 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="24,6,16,30">
-                <Image Source="Assets/logo.png" Width="26" Height="26" RenderOptions.BitmapScalingMode="HighQuality" />
-                <TextBlock Text="A&#x200A;E&#x200A;O&#x200A;X" FontFamily="{StaticResource BrandFont}" FontSize="14" VerticalAlignment="Center" Margin="12,1,0,0" />
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="22,4,12,30">
+                <Image Source="Assets/logo.png" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
+                <TextBlock Text="A&#x200A;&#x200A;E&#x200A;&#x200A;O&#x200A;&#x200A;X" FontFamily="{StaticResource BrandFont}" FontSize="18" VerticalAlignment="Center" Margin="13,2,0,0" />
             </StackPanel>
 
             <StackPanel Grid.Row="2" Margin="12,0">

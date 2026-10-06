@@ -98,7 +98,7 @@ public static partial class GpuDrivers
         var m = BoldPattern().Match(html);
         var text = m.Success ? m.Groups[1].Value : TagPattern().Replace(html, " ");
         text = WhiteSpace().Replace(System.Net.WebUtility.HtmlDecode(text), " ").Trim();
-        return text.Length > 90 ? text[..90] + "…" : text;
+        return text.Length > 90 ? text[..90] + "..." : text;
     }
 
     [GeneratedRegex(@"\s+")]

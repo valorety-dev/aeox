@@ -2,6 +2,7 @@ using Aeox.Core.Changes;
 using Aeox.Core.Game;
 using Aeox.Core.Hardware;
 using Aeox.Core.Ini;
+using Aeox.Core.Stats;
 using Aeox.Core.Tweaks;
 
 namespace Aeox.Core.Tests;
@@ -157,6 +158,26 @@ public sealed class CoreTests : IDisposable
         var world = TweakCatalog.All.Single(t => t.Id == "low-detail-world");
         Assert.False(engine.IsApplied(world.Changes(_ctx)));
         Assert.Empty(engine.Plan(new[] { (world.Title, world.Changes(_ctx), false) }));
+    }
+
+    [Fact]
+    public void ParsesMatchStatsFromGameLog()
+    {
+        var lines = new[]
+        {
+            "[2026.10.05-22.35.07:182][110]LogHealthSnapshot: ======= Snapshot: Start of Match =======",
+            "PingRTT: 38 MinPing: 0.00 MaxPing: 42.64 InPacketsLostPercentage: 0.00 OutPacketsLostPercentage: 0.04 AverageJitter: 4.48 PacketOverhead: 28",
+            "[2026.10.05-22.37.17:690][283]LogHealthSnapshot: MVP: 0.00%, AvgFPS:154.30, HitchesPerMinute: 2.36, Avg Hitch 39.27ms",
+            "[2026.10.05-22.37.17:690][283]LogHealthSnapshot: GT:  Avg 4.11ms, Hitches/Min: 2.30, Bound Frames: 0.06%",
+            "[2026.10.05-22.37.17:690][283]LogHealthSnapshot: RT:  Avg 5.87ms, Hitches/Min: 0.00, Bound Frames: 0.01%",
+            "[2026.10.05-22.37.17:690][283]LogHealthSnapshot: GPU: Avg 6.49ms, Hitches/Min: 0.00, Bound Frames: 0.03%",
+            "[2026.10.05-22.37.17:690][283]LogHealthSnapshot: ========================================================="
+        };
+        var m = Assert.Single(MatchLogParser.Parse(lines));
+        Assert.Equal(154.30, m.AvgFps, 2);
+        Assert.Equal(5.87, m.RenderThreadMs!.Value, 2);
+        Assert.Equal(38, m.PingMs!.Value, 1);
+        Assert.Equal(new DateTime(2026, 10, 5, 22, 37, 17, DateTimeKind.Utc), m.TimeUtc);
     }
 
     [Fact]

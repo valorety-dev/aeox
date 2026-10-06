@@ -39,6 +39,7 @@ public sealed class MainViewModel : Observable
         Network = null!;
         BuildForGame(Settings.Game);
         Checkup = new CheckupViewModel(() => Ctx, p => Page = p);
+        Stats = new StatsViewModel(() => Ctx);
         _ = Checkup.RunAsync();
 
         ApplyCommand = new RelayCommand(Apply, () => _plan.Count > 0);
@@ -53,6 +54,7 @@ public sealed class MainViewModel : Observable
     public IReadOnlyList<PageViewModel> Pages { get; private set; }
     public NetworkViewModel Network { get; private set; }
     public CheckupViewModel Checkup { get; }
+    public StatsViewModel Stats { get; }
 
     public bool IsRetrac
     {
@@ -74,6 +76,7 @@ public sealed class MainViewModel : Observable
         Settings.Game = kind;
         Settings.Save();
         BuildForGame(kind);
+        if (Page == "Stats") _ = Stats.LoadAsync();
         _justApplied = 0;
         _justRestored = null;
         Refresh();
@@ -116,6 +119,8 @@ public sealed class MainViewModel : Observable
             Raise(nameof(IsNetworkPage));
             Raise(nameof(IsSettingsPage));
             Raise(nameof(IsCheckupPage));
+            Raise(nameof(IsStatsPage));
+            if (value == "Stats") _ = Stats.LoadAsync();
             if (value == "Checkup" && Checkup is { HasRun: true }) _ = Checkup.RunAsync();
         }
     }
@@ -125,6 +130,7 @@ public sealed class MainViewModel : Observable
     public bool IsNetworkPage => Page == "Network";
     public bool IsSettingsPage => Page == "Settings";
     public bool IsCheckupPage => Page == "Checkup";
+    public bool IsStatsPage => Page == "Stats";
 
     public StatusKind Status
     {
@@ -235,7 +241,9 @@ public sealed class MainViewModel : Observable
         try
         {
             var count = _plan.Count;
+            var sources = string.Join(", ", _plan.Select(p => p.Source).Distinct());
             Engine.Apply(_plan);
+            Stats.RecordApply(sources);
             ResyncAll();
             _justApplied = count;
             _justRestored = null;

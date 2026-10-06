@@ -21,6 +21,35 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) => ApplyWindowFrame();
         StateChanged += (_, _) => OnStateChanged();
         Activated += (_, _) => _vm.Refresh();
+
+        _auto = new AutoMode(this, _vm);
+        _auto.ExitRequested += ExitApp;
+        if (_vm.Settings.StartWithWindows) AutoMode.SetStartWithWindows(true);
+        Closing += OnClosing;
+    }
+
+    private readonly AutoMode _auto;
+    private bool _exiting;
+
+    public void ShowFromTray() => _auto.ShowWindow();
+
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (_exiting || !_vm.Settings.CloseToTray)
+        {
+            _auto.Dispose();
+            Application.Current.Shutdown();
+            return;
+        }
+        e.Cancel = true;
+        Hide();
+        _auto.HintRunningInTray();
+    }
+
+    private void ExitApp()
+    {
+        _exiting = true;
+        Close();
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)

@@ -212,6 +212,44 @@
                     <TextBlock Text="{Binding ConfigText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding DataText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0" TextWrapping="Wrap" />
 
+                    <TextBlock Text="AUTO MODE" Style="{StaticResource SectionLabel}" Margin="0,30,0,2" />
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,13">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding StartWithWindows, Mode=TwoWay}" AutomationProperties.Name="Start with Windows" />
+                            <StackPanel>
+                                <TextBlock Text="Start with Windows" FontSize="14" />
+                                <TextBlock Text="Runs quietly in the tray." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,13">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding CloseToTray, Mode=TwoWay}" AutomationProperties.Name="Keep running when closed" />
+                            <StackPanel>
+                                <TextBlock Text="Keep running when closed" FontSize="14" />
+                                <TextBlock Text="The close button sends Aeox to the tray." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,13">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding AutoReapply, Mode=TwoWay}" AutomationProperties.Name="Fix settings that get reset" />
+                            <StackPanel>
+                                <TextBlock Text="Fix settings that get reset" FontSize="14" />
+                                <TextBlock Text="Puts your applied settings back if the game, a launcher or a driver changes them." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,13">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding SessionReports, Mode=TwoWay}" AutomationProperties.Name="Session summary" />
+                            <StackPanel>
+                                <TextBlock Text="Session summary" FontSize="14" />
+                                <TextBlock Text="After you close the game: FPS, ping, and a warning if it crashed." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
                     <TextBlock Text="UNDO" Style="{StaticResource SectionLabel}" Margin="0,30,0,0" />
                     <TextBlock Text="{Binding BackupText}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
                     <Button Style="{StaticResource GhostButton}" Content="Restore everything" Command="{Binding RestoreCommand}" HorizontalAlignment="Left" Margin="0,16,0,0" />

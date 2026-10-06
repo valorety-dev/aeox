@@ -71,6 +71,7 @@ public sealed class ChoiceItem : Observable, ISettingItem
     public string Glyph => Setting.Glyph;
     public string GroupName => "choice-" + Setting.Id;
     public bool IsActive => !Setting.Options[_applied].IsKeep;
+    public ChoiceOption? ActiveOption => Setting.Options[_applied].IsKeep ? null : Setting.Options[_applied];
     public bool IsReverting => false;
 
     public void Select(int index)

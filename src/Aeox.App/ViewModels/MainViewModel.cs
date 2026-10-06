@@ -225,6 +225,77 @@ public sealed class MainViewModel : Observable
         StatusDetail = detail;
     }
 
+    public bool StartWithWindows
+    {
+        get => Settings.StartWithWindows;
+        set { Settings.StartWithWindows = value; Settings.Save(); AutoMode.SetStartWithWindows(value); Raise(); }
+    }
+
+    public bool CloseToTray
+    {
+        get => Settings.CloseToTray;
+        set { Settings.CloseToTray = value; Settings.Save(); Raise(); }
+    }
+
+    public bool AutoReapply
+    {
+        get => Settings.AutoReapply;
+        set { Settings.AutoReapply = value; Settings.Save(); Raise(); }
+    }
+
+    public bool SessionReports
+    {
+        get => Settings.SessionReports;
+        set { Settings.SessionReports = value; Settings.Save(); Raise(); }
+    }
+
+    private void RememberActive()
+    {
+        var prefix = Ctx.Game.Kind + "|";
+        Settings.ActiveIds.RemoveAll(i => i.StartsWith(prefix, StringComparison.Ordinal));
+        foreach (var item in AllItems)
+        {
+            if (item is TweakItem { IsActive: true } t) Settings.ActiveIds.Add(prefix + "tweak:" + t.Tweak.Id);
+            if (item is ChoiceItem { ActiveOption: { } option } c) Settings.ActiveIds.Add(prefix + "choice:" + c.Setting.Id + ":" + option.Label);
+        }
+        Settings.Save();
+    }
+
+    public int ReapplyRemembered()
+    {
+        if (RetracGame.IsGameRunning() || !Ctx.Paths.ConfigExists) return 0;
+        var prefix = Ctx.Game.Kind + "|";
+        var desired = new List<(string, IReadOnlyList<Change>, bool)>();
+        foreach (var id in Settings.ActiveIds.Where(i => i.StartsWith(prefix, StringComparison.Ordinal)))
+        {
+            var parts = id[prefix.Length..].Split(':', 3);
+            if (parts[0] == "tweak")
+            {
+                var tweak = TweakCatalog.All.FirstOrDefault(t => t.Id == parts[1]);
+                if (tweak is not null && tweak.IsSupported(Ctx)) desired.Add((tweak.Title, tweak.Changes(Ctx), true));
+            }
+            else if (parts[0] == "choice" && parts.Length == 3)
+            {
+                var setting = TweakCatalog.Choices.FirstOrDefault(c => c.Id == parts[1]);
+                var option = setting?.Options.FirstOrDefault(o => o.Label == parts[2]);
+                if (setting is not null && option is not null && setting.IsSupported(Ctx)) desired.Add(($"{setting.Title}: {option.Label}", option.Changes(Ctx), true));
+            }
+        }
+        var plan = Engine.Plan(desired);
+        if (plan.Count == 0) return 0;
+        try
+        {
+            Engine.Apply(plan);
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            return 0;
+        }
+        ResyncAll();
+        Refresh();
+        return plan.Count;
+    }
+
     private void ResyncAll()
     {
         foreach (var item in AllItems) item.Resync(Ctx, Engine);
@@ -245,6 +316,7 @@ public sealed class MainViewModel : Observable
             Engine.Apply(_plan);
             Stats.RecordApply(sources);
             ResyncAll();
+            RememberActive();
             _justApplied = count;
             _justRestored = null;
             Refresh();
@@ -271,6 +343,8 @@ public sealed class MainViewModel : Observable
         {
             Engine.Apply(plan);
             Engine.ForgetOriginals();
+            Settings.ActiveIds.Clear();
+            Settings.Save();
             ResyncAll();
             _justApplied = 0;
             _justRestored = $"{plan.Count} value{(plan.Count == 1 ? "" : "s")} put back exactly as they were before Aeox.";

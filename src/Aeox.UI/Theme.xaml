@@ -29,7 +29,7 @@
     <FontFamily x:Key="UiFont">Cascadia Mono, Consolas</FontFamily>
     <FontFamily x:Key="DisplayFont">Cascadia Mono, Consolas</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
-    <FontFamily x:Key="BrandFont">pack://application:,,,/Assets/Fonts/#Michroma</FontFamily>
+    <FontFamily x:Key="BrandFont">pack://application:,,,/Aeox.UI;component/Assets/Fonts/#Michroma</FontFamily>
     <FontFamily x:Key="CodeFont">Cascadia Mono, Consolas</FontFamily>
 
     <Style x:Key="ToggleSwitch" TargetType="ToggleButton">

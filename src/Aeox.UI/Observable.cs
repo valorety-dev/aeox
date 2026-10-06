@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace Aeox.App.ViewModels;
+namespace Aeox.UI;
 
 public abstract class Observable : INotifyPropertyChanged
 {

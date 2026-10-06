@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 
-namespace Aeox.App.Controls;
+namespace Aeox.UI.Controls;
 
 public sealed class FpsChart : FrameworkElement
 {

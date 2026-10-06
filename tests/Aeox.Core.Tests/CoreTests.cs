@@ -181,6 +181,23 @@ public sealed class CoreTests : IDisposable
     }
 
     [Fact]
+    public void ReadsDriverVersionAndCrashFromSession()
+    {
+        var lines = new[]
+        {
+            "[2026.10.05-22.33.36:162][  0]LogD3D11RHI:   Driver Version: 617.14 (internal:32.0.16.1714, unified:617.14)",
+            "[2026.10.05-22.37.17:690][283]LogHealthSnapshot: MVP: 0.00%, AvgFPS:154.30, HitchesPerMinute: 2.36, Avg Hitch 39.27ms",
+            "[2026.10.05-22.40.00:000][300]LogNet: something"
+        };
+        Assert.Equal("617.14", Assert.Single(MatchLogParser.Parse(lines)).DriverVersion);
+        var session = MatchLogParser.SessionInfo(lines)!;
+        Assert.Equal("617.14", session.DriverVersion);
+        Assert.True(session.Crashed);
+        Assert.False(MatchLogParser.SessionInfo(lines.Append("[2026.10.05-22.41.00:000][310]LogExit: Exiting.").ToList())!.Crashed);
+        Assert.Equal("617.14", Aeox.Core.Drivers.InstalledGpu.NvidiaVersion("32.0.16.1714"));
+    }
+
+    [Fact]
     public void FrameCapDefaultFollowsMonitor()
     {
         Assert.Equal(240, new HardwareInfo("x", Array.Empty<string>(), 239).FrameCapForDisplay);

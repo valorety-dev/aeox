@@ -14,7 +14,8 @@ public sealed record MatchStat(
     double? RenderThreadMs,
     double? GpuMs,
     double? PingMs,
-    double? JitterMs)
+    double? JitterMs,
+    string? DriverVersion = null)
 {
     public string Bottleneck
     {
@@ -31,10 +32,15 @@ public sealed record MatchStat(
 
 public sealed record ApplyMark(DateTime TimeUtc, string Summary);
 
+public sealed record GameSession(DateTime StartUtc, string? DriverVersion, bool Crashed);
+
+public sealed record DriverSummary(string Version, int Matches, double? AvgFps, double? AvgHitches, int Sessions, int Crashes, DateTime FirstSeenUtc, DateTime LastSeenUtc);
+
 public sealed class HistoryData
 {
     public List<MatchStat> Matches { get; set; } = new();
     public List<ApplyMark> Applies { get; set; } = new();
+    public List<GameSession> Sessions { get; set; } = new();
 }
 
 public static partial class MatchLogParser
@@ -47,9 +53,15 @@ public static partial class MatchLogParser
         var pings = new List<double>();
         var jitters = new List<double>();
         MatchStat? current = null;
+        string? driver = null;
 
         foreach (var line in lines)
         {
+            if (driver is null)
+            {
+                var dv = DriverPattern().Match(line);
+                if (dv.Success) driver = dv.Groups[1].Value;
+            }
             var ping = PingPattern().Match(line);
             if (ping.Success)
             {
@@ -74,7 +86,8 @@ public static partial class MatchLogParser
                     double.Parse(mvp.Groups[4].Value, Inv),
                     null, null, null,
                     pings.Count > 0 ? pings.Average() : null,
-                    jitters.Count > 0 ? jitters.Average() : null);
+                    jitters.Count > 0 ? jitters.Average() : null,
+                    driver);
                 pings.Clear();
                 jitters.Clear();
                 continue;
@@ -118,6 +131,36 @@ public static partial class MatchLogParser
 
     [GeneratedRegex(@"AverageJitter: ([\d.]+)")]
     private static partial Regex JitterPattern();
+
+    [GeneratedRegex(@"Driver Version: (\d+\.\d+)")]
+    private static partial Regex DriverPattern();
+
+    public static GameSession? SessionInfo(IReadOnlyList<string> lines)
+    {
+        DateTime? start = null;
+        string? driver = null;
+        foreach (var line in lines)
+        {
+            if (start is null)
+            {
+                var ts = TimePattern().Match(line);
+                if (ts.Success) start = ParseTime(ts.Groups[1].Value);
+            }
+            if (driver is null)
+            {
+                var dv = DriverPattern().Match(line);
+                if (dv.Success) driver = dv.Groups[1].Value;
+            }
+            if (start is not null && driver is not null) break;
+        }
+        if (start is null) return null;
+        var tail = lines.Skip(Math.Max(0, lines.Count - 40));
+        var clean = tail.Any(l => l.Contains("LogExit: Exiting.", StringComparison.Ordinal));
+        return new GameSession(start.Value, driver, !clean);
+    }
+
+    [GeneratedRegex(@"^\[(\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}):\d{3}\]")]
+    private static partial Regex TimePattern();
 }
 
 public sealed class MatchHistory
@@ -151,34 +194,86 @@ public sealed class MatchHistory
     public int ImportLogs(string logDir)
     {
         if (!Directory.Exists(logDir)) return 0;
-        var known = Data.Matches.Select(m => m.TimeUtc).ToHashSet();
-        var added = 0;
+        var index = new Dictionary<DateTime, int>();
+        for (var i = 0; i < Data.Matches.Count; i++) index[Data.Matches[i].TimeUtc] = i;
+        var sessions = Data.Sessions.Select(s => s.StartUtc).ToHashSet();
+        var gameRunning = Aeox.Core.Game.GameRunning.IsGameRunning();
+        var changed = 0;
         foreach (var file in Directory.EnumerateFiles(logDir, "FortniteGame*.log"))
         {
-            List<MatchStat> parsed;
+            List<string> lines;
             try
             {
                 using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 using var reader = new StreamReader(fs);
-                parsed = MatchLogParser.Parse(ReadLines(reader));
+                lines = ReadLines(reader).ToList();
             }
             catch (IOException)
             {
                 continue;
             }
-            foreach (var m in parsed)
+
+            foreach (var m in MatchLogParser.Parse(lines))
             {
-                if (!known.Add(m.TimeUtc)) continue;
+                if (index.TryGetValue(m.TimeUtc, out var i))
+                {
+                    if (Data.Matches[i].DriverVersion is null && m.DriverVersion is not null)
+                    {
+                        Data.Matches[i] = Data.Matches[i] with { DriverVersion = m.DriverVersion };
+                        changed++;
+                    }
+                    continue;
+                }
+                index[m.TimeUtc] = Data.Matches.Count;
                 Data.Matches.Add(m);
-                added++;
+                changed++;
+            }
+
+            var isLive = gameRunning && Path.GetFileName(file).Equals("FortniteGame.log", StringComparison.OrdinalIgnoreCase);
+            var session = isLive ? null : MatchLogParser.SessionInfo(lines);
+            if (session is not null && sessions.Add(session.StartUtc))
+            {
+                Data.Sessions.Add(session);
+                changed++;
             }
         }
-        if (added > 0)
+        if (changed > 0)
         {
             Data.Matches.Sort((a, b) => a.TimeUtc.CompareTo(b.TimeUtc));
+            Data.Sessions.Sort((a, b) => a.StartUtc.CompareTo(b.StartUtc));
             Save();
         }
-        return added;
+        return changed;
+    }
+
+    public IReadOnlyList<DriverSummary> ByDriver() => Summarize(Data.Matches, Data.Sessions);
+
+    public static IReadOnlyList<DriverSummary> Summarize(IEnumerable<MatchStat> allMatches, IEnumerable<GameSession> allSessions)
+    {
+        var matchList = allMatches.ToList();
+        var sessionList = allSessions.ToList();
+        var versions = matchList.Select(m => m.DriverVersion)
+            .Concat(sessionList.Select(s => s.DriverVersion))
+            .Where(v => v is not null)
+            .Distinct()
+            .Cast<string>();
+        var list = new List<DriverSummary>();
+        foreach (var v in versions)
+        {
+            var matches = matchList.Where(m => m.DriverVersion == v).ToList();
+            var sessions = sessionList.Where(s => s.DriverVersion == v).ToList();
+            var times = matches.Select(m => m.TimeUtc).Concat(sessions.Select(s => s.StartUtc)).ToList();
+            list.Add(new DriverSummary(
+                v,
+                matches.Count,
+                matches.Count > 0 ? matches.Average(m => m.AvgFps) : null,
+                matches.Count > 0 ? matches.Average(m => m.HitchesPerMin) : null,
+                sessions.Count,
+                sessions.Count(s => s.Crashed),
+                times.Min(),
+                times.Max()));
+        }
+        return list.OrderByDescending(d => d.LastSeenUtc).ToList();
     }
 
     public void AddApply(string summary)

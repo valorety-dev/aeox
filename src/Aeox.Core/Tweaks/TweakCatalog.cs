@@ -19,7 +19,7 @@ public static class TweakCatalog
     {
         new("uncapped-fps", TweakCategory.Performance,
             "Uncapped frame rate",
-            "Removes the in-game FPS cap so your PC can render as fast as it can.",
+            "No FPS limit.",
             "\uEC4A",
             ctx => new[]
             {
@@ -28,7 +28,7 @@ public static class TweakCatalog
 
         new("low-latency", TweakCategory.Performance,
             "Improve input latency",
-            "Turns off vsync and mouse smoothing, and enables NVIDIA Reflex On + Boost when available.",
+            "Vsync off, raw mouse, Reflex + Boost on NVIDIA.",
             "\uE962",
             ctx =>
             {
@@ -45,7 +45,7 @@ public static class TweakCatalog
 
         new("low-detail-world", TweakCategory.Performance,
             "Lightweight world",
-            "Low quality presets and the simplest tree and building models. Cover stays exactly where it is.",
+            "Simplest models and presets. Cover stays the same.",
             "\uF158",
             ctx =>
             {
@@ -59,7 +59,7 @@ public static class TweakCatalog
 
         new("no-post-processing", TweakCategory.Performance,
             "Remove post-processing",
-            "Disables motion blur, bloom, depth of field, ambient occlusion, lens flares and film grain.",
+            "No blur, bloom, depth of field or grain.",
             "\uE794",
             ctx => new[]
             {
@@ -82,7 +82,7 @@ public static class TweakCatalog
 
         new("no-grass", TweakCategory.Performance,
             "Disable grass",
-            "Stops grass from being drawn at all, which saves GPU and CPU time in every frame.",
+            "Grass is not drawn at all.",
             "\uEC0A",
             ctx => new[]
             {
@@ -94,7 +94,7 @@ public static class TweakCatalog
 
         new("lock-settings", TweakCategory.Performance,
             "Lock settings",
-            "Makes the config files read-only so the game or launcher cannot quietly reset them.",
+            "Stops the game from resetting your settings.",
             "\uE72E",
             ctx => new[]
             {

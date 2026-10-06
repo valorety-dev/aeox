@@ -14,17 +14,18 @@ public enum TweakCategory
 
 public sealed class AeoxContext
 {
-    public AeoxContext(RetracPaths paths, HardwareInfo hardware, string dataDir, string? gameExe = null)
+    public AeoxContext(GameProfile game, HardwareInfo hardware, string dataDir, string? gameExe = null)
     {
-        Paths = paths;
+        Game = game;
         Hardware = hardware;
         DataDir = dataDir;
-        GameExe = gameExe;
+        GameExe = gameExe ?? game.FindExe();
     }
 
+    public GameProfile Game { get; }
     public string? GameExe { get; }
 
-    public RetracPaths Paths { get; }
+    public GamePaths Paths => Game.Paths;
     public HardwareInfo Hardware { get; }
     public string DataDir { get; }
 

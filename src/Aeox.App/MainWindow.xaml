@@ -90,23 +90,31 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="40" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="22,4,12,30">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="22,4,12,22">
                 <Image Source="Assets/logo.png" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
                 <TextBlock Text="A&#x200A;&#x200A;E&#x200A;&#x200A;O&#x200A;&#x200A;X" FontFamily="{StaticResource BrandFont}" FontSize="18" VerticalAlignment="Center" Margin="13,2,0,0" />
             </StackPanel>
 
-            <StackPanel Grid.Row="2" Margin="12,0">
+            <Border Grid.Row="2" Margin="12,0,12,22" Padding="3" CornerRadius="10" Background="#10121B" BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                <UniformGrid Columns="2">
+                    <RadioButton Style="{StaticResource Segment}" GroupName="Game" Content="Retrac" IsChecked="{Binding IsRetrac, Mode=TwoWay}" />
+                    <RadioButton Style="{StaticResource Segment}" GroupName="Game" Content="Fortnite" IsChecked="{Binding IsFortnite, Mode=TwoWay}" />
+                </UniformGrid>
+            </Border>
+
+            <StackPanel Grid.Row="3" Margin="12,0">
                 <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE945;" Content="Performance" IsChecked="True" Checked="Nav_Checked" CommandParameter="Performance" />
                 <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE7F4;" Content="Visuals" Checked="Nav_Checked" CommandParameter="Visuals" />
                 <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE774;" Content="Network" Checked="Nav_Checked" CommandParameter="Network" />
                 <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE950;" Content="System" Checked="Nav_Checked" CommandParameter="System" />
             </StackPanel>
 
-            <RadioButton Grid.Row="3" Margin="12,0,12,16" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" Checked="Nav_Checked" CommandParameter="Settings" />
+            <RadioButton Grid.Row="4" Margin="12,0,12,16" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" Checked="Nav_Checked" CommandParameter="Settings" />
         </Grid>
 
         <Grid Grid.Column="1">
@@ -122,6 +130,9 @@
                 <StackPanel MaxWidth="640" HorizontalAlignment="Left">
                     <TextBlock Text="Settings" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
                     <TextBlock Text="Hardware, locations and undo." FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,32" />
+
+                    <TextBlock Text="GAME" Style="{StaticResource SectionLabel}" />
+                    <TextBlock Text="{Binding GameText}" FontSize="13.5" Margin="0,10,0,30" TextWrapping="Wrap" />
 
                     <TextBlock Text="HARDWARE" Style="{StaticResource SectionLabel}" />
                     <TextBlock Text="{Binding CpuText}" FontSize="13.5" Margin="0,10,0,0" TextWrapping="Wrap" />

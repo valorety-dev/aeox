@@ -11,9 +11,12 @@ public sealed record ChoiceOption(string Label, Func<AeoxContext, IReadOnlyList<
 
 public sealed class ChoiceSetting
 {
+    private readonly Func<AeoxContext, bool> _supported;
+
     public ChoiceSetting(string id, TweakCategory category, string title, string description, string glyph,
-        IReadOnlyList<ChoiceOption> options)
+        IReadOnlyList<ChoiceOption> options, Func<AeoxContext, bool>? supported = null)
     {
+        _supported = supported ?? (_ => true);
         Id = id;
         Category = category;
         Title = title;
@@ -28,6 +31,8 @@ public sealed class ChoiceSetting
     public string Description { get; }
     public string Glyph { get; }
     public IReadOnlyList<ChoiceOption> Options { get; }
+
+    public bool IsSupported(AeoxContext ctx) => _supported(ctx);
 
     public int DetectSelected(AeoxContext ctx, ChangeEngine engine)
     {

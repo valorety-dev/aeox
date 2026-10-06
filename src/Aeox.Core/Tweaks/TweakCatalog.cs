@@ -9,6 +9,11 @@ public static class TweakCatalog
     private const string Cvars = RetracGame.ConsoleVariablesSection;
     private const string Scalability = RetracGame.ScalabilitySection;
 
+    private static readonly string[] LiveOnlyScalabilityGroups =
+    {
+        "sg.GlobalIlluminationQuality", "sg.ReflectionQuality", "sg.LandscapeQuality"
+    };
+
     private static readonly string[] LowScalabilityGroups =
     {
         "sg.ViewDistanceQuality", "sg.AntiAliasingQuality", "sg.ShadowQuality", "sg.PostProcessQuality",
@@ -34,11 +39,18 @@ public static class TweakCatalog
             {
                 var list = new List<Change>
                 {
-                    Change.Ini(ctx.Paths.GameUserSettings, Gus, "bUseVSync", "False", "False"),
-                    Change.Ini(ctx.Paths.Engine, Cvars, "r.VSync", "0"),
-                    Change.Ini(ctx.Paths.Input, RetracGame.InputSection, "bEnableMouseSmoothing", "False"),
-                    Change.Ini(ctx.Paths.Input, RetracGame.InputSection, "bViewAccelerationEnabled", "False")
+                    Change.Ini(ctx.Paths.GameUserSettings, Gus, "bUseVSync", "False", "False")
                 };
+                if (ctx.Game.SupportsEngineTweaks)
+                {
+                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "r.VSync", "0"));
+                    list.Add(Change.Ini(ctx.Paths.Input, RetracGame.InputSection, "bEnableMouseSmoothing", "False"));
+                    list.Add(Change.Ini(ctx.Paths.Input, RetracGame.InputSection, "bViewAccelerationEnabled", "False"));
+                }
+                else
+                {
+                    list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "bDisableMouseAcceleration", "True", "False"));
+                }
                 if (ctx.Hardware.HasNvidia) list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "LatencyTweak2", "2", "0"));
                 return list;
             }),
@@ -49,11 +61,19 @@ public static class TweakCatalog
             "\uF158",
             ctx =>
             {
-                var list = LowScalabilityGroups.Select(g => Change.Ini(ctx.Paths.GameUserSettings, Scalability, g, "0", "2")).ToList();
-                list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "foliage.LODDistanceScale", "0.1"));
-                list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "foliage.DitheredLOD", "0"));
-                list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "r.StaticMeshLODDistanceScale", "3"));
-                list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "r.MaxAnisotropy", "0"));
+                var groups = ctx.Game.SupportsEngineTweaks ? LowScalabilityGroups : LowScalabilityGroups.Concat(LiveOnlyScalabilityGroups);
+                var list = groups.Select(g => Change.Ini(ctx.Paths.GameUserSettings, Scalability, g, "0", "2")).ToList();
+                if (ctx.Game.SupportsEngineTweaks)
+                {
+                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "foliage.LODDistanceScale", "0.1"));
+                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "foliage.DitheredLOD", "0"));
+                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "r.StaticMeshLODDistanceScale", "3"));
+                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "r.MaxAnisotropy", "0"));
+                }
+                else
+                {
+                    list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "bRayTracing", "False", "False"));
+                }
                 return list;
             }),
 
@@ -78,30 +98,37 @@ public static class TweakCatalog
                 Change.Ini(ctx.Paths.Engine, Cvars, "r.RefractionQuality", "0"),
                 Change.Ini(ctx.Paths.Engine, Cvars, "r.ParticleLightQuality", "0"),
                 Change.Ini(ctx.Paths.Engine, Cvars, "r.Tonemapper.GrainQuantization", "0")
-            }),
+            },
+            ctx => ctx.Game.SupportsEngineTweaks),
 
         new("no-grass", TweakCategory.Performance,
             "Disable grass",
             "Grass is not drawn at all.",
             "\uEC0A",
-            ctx => new[]
+            ctx =>
             {
-                Change.Ini(ctx.Paths.GameUserSettings, Gus, "bShowGrass", "False", "True"),
-                Change.Ini(ctx.Paths.Engine, Cvars, "grass.Enable", "0"),
-                Change.Ini(ctx.Paths.Engine, Cvars, "grass.DensityScale", "0"),
-                Change.Ini(ctx.Paths.Engine, Cvars, "grass.CullDistanceScale", "0")
+                var list = new List<Change> { Change.Ini(ctx.Paths.GameUserSettings, Gus, "bShowGrass", "False", "True") };
+                if (ctx.Game.SupportsEngineTweaks)
+                {
+                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "grass.Enable", "0"));
+                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "grass.DensityScale", "0"));
+                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "grass.CullDistanceScale", "0"));
+                }
+                return list;
             }),
 
         new("lock-settings", TweakCategory.Performance,
             "Lock settings",
             "Stops the game from resetting your settings.",
             "\uE72E",
-            ctx => new[]
-            {
-                Change.ReadOnly(ctx.Paths.GameUserSettings, true),
-                Change.ReadOnly(ctx.Paths.Engine, true),
-                Change.ReadOnly(ctx.Paths.Input, true)
-            }),
+            ctx => ctx.Game.SupportsEngineTweaks
+                ? new[]
+                {
+                    Change.ReadOnly(ctx.Paths.GameUserSettings, true),
+                    Change.ReadOnly(ctx.Paths.Engine, true),
+                    Change.ReadOnly(ctx.Paths.Input, true)
+                }
+                : new[] { Change.ReadOnly(ctx.Paths.GameUserSettings, true) }),
 
         new("show-fps", TweakCategory.Visuals,
             "FPS counter",
@@ -176,6 +203,19 @@ public static class TweakCatalog
 
     public static IReadOnlyList<ChoiceSetting> Choices { get; } = new List<ChoiceSetting>
     {
+        new("renderer", TweakCategory.Visuals,
+            "Rendering mode",
+            "Performance mode is the lightweight renderer behind 400+ FPS.",
+            "\uE945",
+            new[]
+            {
+                ChoiceOption.Keep,
+                Renderer("Performance", "dx11", "es31"),
+                Renderer("DirectX 11", "dx11", "sm5"),
+                Renderer("DirectX 12", "dx12", "sm6")
+            },
+            ctx => ctx.Game.HasPerformanceMode),
+
         new("window-mode", TweakCategory.Visuals,
             "Window mode",
             "Fullscreen has the lowest input delay.",
@@ -238,6 +278,13 @@ public static class TweakCatalog
         Change.Ini(ctx.Paths.GameUserSettings, Gus, "LastUserConfirmedDesiredScreenWidth", w.ToString()),
         Change.Ini(ctx.Paths.GameUserSettings, Gus, "LastUserConfirmedDesiredScreenHeight", h.ToString())
     };
+
+    private static ChoiceOption Renderer(string label, string rhi, string featureLevel) =>
+        new(label, ctx => new[]
+        {
+            Change.Ini(ctx.Paths.GameUserSettings, RetracGame.RhiSection, "PreferredRHI", rhi),
+            Change.Ini(ctx.Paths.GameUserSettings, RetracGame.RhiSection, "PreferredFeatureLevel", featureLevel)
+        });
 
     private static ChoiceOption RenderScale(int percent) =>
         new($"{percent}%", ctx => new[]

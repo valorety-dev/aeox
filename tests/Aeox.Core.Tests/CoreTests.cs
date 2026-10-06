@@ -14,7 +14,8 @@ public sealed class CoreTests : IDisposable
     public CoreTests()
     {
         _root = Path.Combine(Path.GetTempPath(), "aeox-tests-" + Guid.NewGuid().ToString("N"));
-        var paths = new RetracPaths(Path.Combine(_root, "Saved"));
+        var game = GameProfile.Retrac(Path.Combine(_root, "Saved"));
+        var paths = game.Paths;
         Directory.CreateDirectory(paths.ConfigDir);
         File.WriteAllLines(paths.GameUserSettings, new[]
         {
@@ -27,7 +28,7 @@ public sealed class CoreTests : IDisposable
             "sg.ResolutionQuality=100.000000",
             "sg.ShadowQuality=3"
         });
-        _ctx = new AeoxContext(paths, new HardwareInfo("AMD Ryzen 9 7900X3D", new[] { "NVIDIA GeForce RTX 4080 SUPER" }), Path.Combine(_root, "data"));
+        _ctx = new AeoxContext(game, new HardwareInfo("AMD Ryzen 9 7900X3D", new[] { "NVIDIA GeForce RTX 4080 SUPER" }), Path.Combine(_root, "data"), "C:\\fake\\FortniteClient-Win64-Shipping.exe");
     }
 
     public void Dispose()
@@ -133,6 +134,32 @@ public sealed class CoreTests : IDisposable
     }
 
     [Fact]
+    public void LiveFortniteNeverTouchesEngineFiles()
+    {
+        var live = new AeoxContext(GameProfile.Fortnite(Path.Combine(_root, "Live")), _ctx.Hardware, _ctx.DataDir, "C:\\fake\\x.exe");
+        var supported = TweakCatalog.All.Where(t => t.IsSupported(live) && t.Category != TweakCategory.System);
+        var changes = supported.SelectMany(t => t.Changes(live)).ToList();
+        Assert.NotEmpty(changes);
+        Assert.DoesNotContain(changes, c => c.Target.EndsWith("Engine.ini") || c.Target.EndsWith("Input.ini"));
+        Assert.DoesNotContain(supported, t => t.Id == "no-post-processing");
+        Assert.Contains(TweakCatalog.Choices, c => c.Id == "renderer" && c.IsSupported(live));
+        Assert.DoesNotContain(TweakCatalog.Choices, c => c.Id == "renderer" && c.IsSupported(_ctx));
+        Assert.True(ChangeEngine.ValuesEqual("100", "100.000000"));
+    }
+
+    [Fact]
+    public void PartlyMatchingTweakThatIsOffStaysUntouched()
+    {
+        var doc = IniDocument.Load(_ctx.Paths.GameUserSettings);
+        doc.Set(RetracGame.ScalabilitySection, "sg.ShadowQuality", "0");
+        doc.Save(_ctx.Paths.GameUserSettings);
+        var engine = NewEngine();
+        var world = TweakCatalog.All.Single(t => t.Id == "low-detail-world");
+        Assert.False(engine.IsApplied(world.Changes(_ctx)));
+        Assert.Empty(engine.Plan(new[] { (world.Title, world.Changes(_ctx), false) }));
+    }
+
+    [Fact]
     public void FrameCapDefaultFollowsMonitor()
     {
         Assert.Equal(240, new HardwareInfo("x", Array.Empty<string>(), 239).FrameCapForDisplay);
@@ -143,7 +170,7 @@ public sealed class CoreTests : IDisposable
     [Fact]
     public void ReflexIsOnlyAddedForNvidia()
     {
-        var amdCtx = new AeoxContext(_ctx.Paths, new HardwareInfo("Intel Core i7", new[] { "AMD Radeon RX 7800 XT" }), _ctx.DataDir);
+        var amdCtx = new AeoxContext(_ctx.Game, new HardwareInfo("Intel Core i7", new[] { "AMD Radeon RX 7800 XT" }), _ctx.DataDir);
         var latency = TweakCatalog.All.Single(t => t.Id == "low-latency");
         Assert.DoesNotContain(latency.Changes(amdCtx), c => c.Key == "LatencyTweak2");
         Assert.Contains(latency.Changes(_ctx), c => c.Key == "LatencyTweak2");

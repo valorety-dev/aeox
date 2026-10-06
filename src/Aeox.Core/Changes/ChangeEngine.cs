@@ -34,6 +34,7 @@ public sealed class ChangeEngine
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (source, changes, enabled) in desired)
         {
+            var wasFullyOn = !enabled && IsApplied(changes);
             foreach (var change in changes)
             {
                 if (!seen.Add(change.Id)) continue;
@@ -51,7 +52,7 @@ public sealed class ChangeEngine
                 }
                 else
                 {
-                    if (!ValuesEqual(current, change.Value)) continue;
+                    if (!wasFullyOn || !ValuesEqual(current, change.Value)) continue;
                     target = change.Default;
                     revert = RevertKind.GameDefault;
                 }
@@ -126,8 +127,15 @@ public sealed class ChangeEngine
         _store.Save();
     }
 
-    public static bool ValuesEqual(string? a, string? b) =>
-        string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+    public static bool ValuesEqual(string? a, string? b)
+    {
+        if (string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase)) return true;
+        if (a is null || b is null) return false;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        return double.TryParse(a, System.Globalization.NumberStyles.Float, inv, out var x)
+               && double.TryParse(b, System.Globalization.NumberStyles.Float, inv, out var y)
+               && Math.Abs(x - y) < 1e-6;
+    }
 
     private static void SetReadOnly(string file, bool on)
     {

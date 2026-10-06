@@ -27,18 +27,17 @@ public sealed class MainViewModel : Observable
     private int _justApplied;
     private string? _justRestored;
 
+    private readonly HardwareInfo _hardware;
+
     public MainViewModel()
     {
-        Ctx = new AeoxContext(RetracPaths.Default(), HardwareInfo.Detect(), AeoxContext.DefaultDataDir(), RetracGame.FindGameExe());
-        Engine = new ChangeEngine(new OriginalStore(System.IO.Path.Combine(Ctx.DataDir, "originals.json")));
-
-        Pages = new[]
-        {
-            BuildPage(TweakCategory.Performance, "Performance", "More FPS, less delay."),
-            BuildPage(TweakCategory.Visuals, "Visuals", "How the game is displayed."),
-            BuildPage(TweakCategory.System, "System", "Windows settings that affect the game.")
-        };
-        Network = new NetworkViewModel(Ctx);
+        Settings = AppSettings.Load();
+        _hardware = HardwareInfo.Detect();
+        Engine = new ChangeEngine(new OriginalStore(System.IO.Path.Combine(AeoxContext.DefaultDataDir(), "originals.json")));
+        Ctx = null!;
+        Pages = Array.Empty<PageViewModel>();
+        Network = null!;
+        BuildForGame(Settings.Game);
 
         ApplyCommand = new RelayCommand(Apply, () => _plan.Count > 0);
         RestoreCommand = new RelayCommand(RestoreAll, () => Engine.Store.All.Count > 0);
@@ -46,10 +45,56 @@ public sealed class MainViewModel : Observable
         Refresh();
     }
 
-    public AeoxContext Ctx { get; }
+    public AppSettings Settings { get; }
+    public AeoxContext Ctx { get; private set; }
     public ChangeEngine Engine { get; }
-    public IReadOnlyList<PageViewModel> Pages { get; }
-    public NetworkViewModel Network { get; }
+    public IReadOnlyList<PageViewModel> Pages { get; private set; }
+    public NetworkViewModel Network { get; private set; }
+
+    public bool IsRetrac
+    {
+        get => Ctx.Game.Kind == GameKind.Retrac;
+        set { if (value) SelectGame(GameKind.Retrac); }
+    }
+
+    public bool IsFortnite
+    {
+        get => Ctx.Game.Kind == GameKind.Fortnite;
+        set { if (value) SelectGame(GameKind.Fortnite); }
+    }
+
+    public string GameText => Ctx.Game.Name + (Ctx.GameExe is null ? "  ·  game files not found" : string.Empty);
+
+    private void SelectGame(GameKind kind)
+    {
+        if (Ctx.Game.Kind == kind) return;
+        Settings.Game = kind;
+        Settings.Save();
+        BuildForGame(kind);
+        _justApplied = 0;
+        _justRestored = null;
+        Refresh();
+    }
+
+    private void BuildForGame(GameKind kind)
+    {
+        Ctx = new AeoxContext(GameProfile.For(kind), _hardware, AeoxContext.DefaultDataDir());
+        Pages = new[]
+        {
+            BuildPage(TweakCategory.Performance, "Performance", "More FPS, less delay."),
+            BuildPage(TweakCategory.Visuals, "Visuals", "How the game is displayed."),
+            BuildPage(TweakCategory.System, "System", "Windows settings that affect the game.")
+        };
+        Network = new NetworkViewModel(Ctx);
+        Raise(nameof(Ctx));
+        Raise(nameof(Pages));
+        Raise(nameof(Network));
+        Raise(nameof(CurrentPage));
+        Raise(nameof(IsRetrac));
+        Raise(nameof(IsFortnite));
+        Raise(nameof(GameText));
+        Raise(nameof(ConfigText));
+    }
     public ObservableCollection<PreviewLine> Preview { get; } = new();
     public ICommand ApplyCommand { get; }
     public ICommand RestoreCommand { get; }
@@ -107,7 +152,7 @@ public sealed class MainViewModel : Observable
     private PageViewModel BuildPage(TweakCategory category, string title, string subtitle)
     {
         var items = new List<object>();
-        items.AddRange(TweakCatalog.ChoicesFor(category).Select(c => new ChoiceItem(c, Ctx, Engine, OnItemChanged)));
+        items.AddRange(TweakCatalog.ChoicesFor(category).Where(c => c.IsSupported(Ctx)).Select(c => new ChoiceItem(c, Ctx, Engine, OnItemChanged)));
         items.AddRange(TweakCatalog.For(category)
             .Where(t => t.IsSupported(Ctx))
             .Select(t => new TweakItem(t, Ctx, Engine.IsApplied(t.Changes(Ctx)), OnItemChanged)));
@@ -135,7 +180,7 @@ public sealed class MainViewModel : Observable
     {
         if (!Ctx.Paths.ConfigExists)
         {
-            SetStatus(StatusKind.Error, "Retrac settings not found", "Launch Retrac once so Fortnite creates its settings files, then reopen Aeox.");
+            SetStatus(StatusKind.Error, $"{Ctx.Game.ShortName} settings not found", $"Launch {Ctx.Game.ShortName} once so the game creates its settings files.");
             return;
         }
         if (_plan.Count > 0)

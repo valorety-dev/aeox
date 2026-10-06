@@ -26,6 +26,57 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
         </Style>
+
+        <DataTemplate DataType="{x:Type vm:TweakItem}">
+            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,17">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="Icon" Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource FaintBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,24,0">
+                        <TextBlock Text="{Binding Title}" FontSize="14" />
+                        <TextBlock Text="{Binding Description}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <ToggleButton Grid.Column="2" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsOn, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Title}" />
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsOn}" Value="True">
+                    <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource AccentSoftBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:ChoiceItem}">
+            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,17">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="16" VerticalAlignment="Top" Margin="0,2,0,0" Foreground="{StaticResource FaintBrush}" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Title}" FontSize="14" />
+                        <TextBlock Text="{Binding Description}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                        <ItemsControl ItemsSource="{Binding Options}" Margin="0,12,0,0" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ChoiceOptionItem}">
+                                    <RadioButton Style="{StaticResource Pill}" Content="{Binding Label}" GroupName="{Binding GroupName}" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid x:Name="Root">
@@ -49,47 +100,21 @@
             </StackPanel>
 
             <StackPanel Grid.Row="2" Margin="12,0">
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE945;" Content="Performance" IsChecked="True" Command="{Binding NavigateCommand}" CommandParameter="Performance" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE7F4;" Content="Visuals" Command="{Binding NavigateCommand}" CommandParameter="Visuals" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE774;" Content="Network" Command="{Binding NavigateCommand}" CommandParameter="Network" />
-                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE950;" Content="System" Command="{Binding NavigateCommand}" CommandParameter="System" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE945;" Content="Performance" IsChecked="True" Checked="Nav_Checked" CommandParameter="Performance" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE7F4;" Content="Visuals" Checked="Nav_Checked" CommandParameter="Visuals" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE774;" Content="Network" Checked="Nav_Checked" CommandParameter="Network" />
+                <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE950;" Content="System" Checked="Nav_Checked" CommandParameter="System" />
             </StackPanel>
 
-            <RadioButton Grid.Row="3" Margin="12,0,12,16" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" Command="{Binding NavigateCommand}" CommandParameter="Settings" />
+            <RadioButton Grid.Row="3" Margin="12,0,12,16" Style="{StaticResource NavButton}" GroupName="Nav" Tag="&#xE713;" Content="Settings" Checked="Nav_Checked" CommandParameter="Settings" />
         </Grid>
 
         <Grid Grid.Column="1">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsPerformancePage, Converter={StaticResource BoolToVis}}">
-                <StackPanel MaxWidth="640" HorizontalAlignment="Left">
-                    <TextBlock Text="Performance" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="More FPS, less delay." FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,28" />
-
-                    <ItemsControl ItemsSource="{Binding PerformanceTweaks}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:TweakItem}">
-                                <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,17">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="36" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="Icon" Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="16" VerticalAlignment="Center" Foreground="{StaticResource FaintBrush}" />
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,24,0">
-                                            <TextBlock Text="{Binding Title}" FontSize="14" />
-                                            <TextBlock Text="{Binding Description}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
-                                        <ToggleButton Grid.Column="2" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsOn, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Title}" />
-                                    </Grid>
-                                </Border>
-                                <DataTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding IsOn}" Value="True">
-                                        <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource AccentSoftBrush}" />
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsTweakPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel MaxWidth="640" HorizontalAlignment="Left" DataContext="{Binding CurrentPage}">
+                    <TextBlock Text="{Binding Title}" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Subtitle}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,28" />
+                    <ItemsControl ItemsSource="{Binding Items}" Focusable="False" />
                 </StackPanel>
             </ScrollViewer>
 
@@ -101,6 +126,7 @@
                     <TextBlock Text="HARDWARE" Style="{StaticResource SectionLabel}" />
                     <TextBlock Text="{Binding CpuText}" FontSize="13.5" Margin="0,10,0,0" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding GpuText}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding DisplayText}" FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
 
                     <TextBlock Text="LOCATIONS" Style="{StaticResource SectionLabel}" Margin="0,30,0,0" />
                     <TextBlock Text="{Binding ConfigText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
@@ -112,10 +138,47 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,60" Visibility="{Binding IsComingSoonPage, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="{Binding Page}" FontFamily="{StaticResource DisplayFont}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock Text="Coming in the next build." FontSize="13" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" Margin="0,6,0,0" />
-            </StackPanel>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40,52,40,32" Visibility="{Binding IsNetworkPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel MaxWidth="640" HorizontalAlignment="Left" DataContext="{Binding Network}">
+                    <TextBlock Text="Network" FontFamily="{StaticResource DisplayFont}" FontSize="24" FontWeight="SemiBold" />
+                    <TextBlock Text="Find out where lag actually comes from." FontSize="13.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,32" />
+
+                    <TextBlock Text="CONNECTION" Style="{StaticResource SectionLabel}" />
+                    <TextBlock Text="{Binding ConnectionText}" FontSize="13.5" Margin="0,10,0,0" TextWrapping="Wrap" />
+
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,24,0,17" Margin="0,8,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE839;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="{StaticResource FaintBrush}" Margin="0,2,0,0" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Your router" FontSize="14" />
+                                <TextBlock Text="{Binding RouterText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,17">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE774;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="{StaticResource FaintBrush}" Margin="0,2,0,0" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding ServerLabel}" FontSize="14" />
+                                <TextBlock Text="{Binding ServerText}" FontFamily="{StaticResource CodeFont}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Text="{Binding Verdict}" FontSize="13.5" Margin="0,22,0,0" TextWrapping="Wrap" />
+                    <Button Style="{StaticResource GhostButton}" Content="{Binding ButtonText}" Command="{Binding RunCommand}" HorizontalAlignment="Left" Margin="0,18,0,0" />
+                    <TextBlock Text="Sends 30 pings to each. Registry “network tweaks” do nothing for Fortnite, so Aeox does not ship any." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,18,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
 
         <Border Grid.Column="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1,0,0,0">

@@ -101,8 +101,147 @@ public static class TweakCatalog
                 Change.ReadOnly(ctx.Paths.GameUserSettings, true),
                 Change.ReadOnly(ctx.Paths.Engine, true),
                 Change.ReadOnly(ctx.Paths.Input, true)
+            }),
+
+        new("show-fps", TweakCategory.Visuals,
+            "FPS counter",
+            "Shows your frame rate in the corner while playing.",
+            "\uE9D9",
+            ctx => new[]
+            {
+                Change.Ini(ctx.Paths.GameUserSettings, Gus, "bShowFPS", "True", "False")
+            }),
+
+        new("dedicated-gpu", TweakCategory.System,
+            "Use the dedicated GPU",
+            "Fortnite always runs on your graphics card.",
+            "\uE950",
+            ctx => new[]
+            {
+                Change.Registry(@"HKCU\Software\Microsoft\DirectX\UserGpuPreferences", ctx.GameExe!, "sz:GpuPreference=2;")
+            },
+            ctx => ctx.GameExe is not null && ctx.Hardware.HasMultipleGpus),
+
+        new("no-fso", TweakCategory.System,
+            "Disable fullscreen optimizations",
+            "True exclusive fullscreen for Fortnite.",
+            "\uE8A7",
+            ctx => new[]
+            {
+                Change.Registry(@"HKCU\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers", ctx.GameExe!, "sz:~ DISABLEDXMAXIMIZEDWINDOWEDMODE")
+            },
+            ctx => ctx.GameExe is not null),
+
+        new("game-mode", TweakCategory.System,
+            "Game Mode",
+            "Windows prioritises the game and pauses updates while you play.",
+            "\uE7FC",
+            _ => new[]
+            {
+                Change.Registry(@"HKCU\Software\Microsoft\GameBar", "AutoGameModeEnabled", "dword:1"),
+                Change.Registry(@"HKCU\Software\Microsoft\GameBar", "AllowAutoGameMode", "dword:1")
+            }),
+
+        new("no-background-recording", TweakCategory.System,
+            "No background recording",
+            "Stops Game Bar from recording gameplay in the background.",
+            "\uE714",
+            _ => new[]
+            {
+                Change.Registry(@"HKCU\System\GameConfigStore", "GameDVR_Enabled", "dword:0", "dword:1"),
+                Change.Registry(@"HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR", "AppCaptureEnabled", "dword:0")
+            }),
+
+        new("no-mouse-acceleration", TweakCategory.System,
+            "Raw mouse movement",
+            "Turns off Windows pointer acceleration so aim is consistent.",
+            "\uE962",
+            _ => new[]
+            {
+                Change.Registry(Aeox.Core.Windows.MouseSettings.RegistryPath, "MouseSpeed", "sz:0", "sz:1"),
+                Change.Registry(Aeox.Core.Windows.MouseSettings.RegistryPath, "MouseThreshold1", "sz:0", "sz:6"),
+                Change.Registry(Aeox.Core.Windows.MouseSettings.RegistryPath, "MouseThreshold2", "sz:0", "sz:10")
+            }),
+
+        new("power-plan", TweakCategory.System,
+            "Best power plan",
+            "Balanced on X3D chips, High performance otherwise.",
+            "\uE945",
+            ctx => new[]
+            {
+                Change.PowerPlan(ctx.Hardware.IsX3D ? Aeox.Core.Windows.PowerPlans.Balanced : Aeox.Core.Windows.PowerPlans.HighPerformance,
+                    Aeox.Core.Windows.PowerPlans.Balanced)
+            })
+    };
+
+    public static IReadOnlyList<ChoiceSetting> Choices { get; } = new List<ChoiceSetting>
+    {
+        new("window-mode", TweakCategory.Visuals,
+            "Window mode",
+            "Fullscreen has the lowest input delay.",
+            "\uE740",
+            new[]
+            {
+                ChoiceOption.Keep,
+                WindowMode("Fullscreen", 0),
+                WindowMode("Borderless", 1),
+                WindowMode("Windowed", 2)
+            }),
+
+        new("resolution", TweakCategory.Visuals,
+            "Resolution",
+            "Stretched 4:3 needs Fullscreen and GPU scaling set to full-screen.",
+            "\uE7F4",
+            new[]
+            {
+                ChoiceOption.Keep,
+                new ChoiceOption("Native", ctx => Resolution(ctx, ctx.Hardware.ScreenWidth, ctx.Hardware.ScreenHeight)),
+                new ChoiceOption("1680×1050", ctx => Resolution(ctx, 1680, 1050)),
+                new ChoiceOption("1440×1080", ctx => Resolution(ctx, 1440, 1080)),
+                new ChoiceOption("1280×960", ctx => Resolution(ctx, 1280, 960))
+            }),
+
+        new("render-scale", TweakCategory.Visuals,
+            "Render scale",
+            "Lower is faster and softer. 100% keeps it sharp.",
+            "\uE71E",
+            new[]
+            {
+                ChoiceOption.Keep,
+                RenderScale(100),
+                RenderScale(85),
+                RenderScale(75),
+                RenderScale(50)
             })
     };
 
     public static IEnumerable<Tweak> For(TweakCategory category) => All.Where(t => t.Category == category);
+
+    public static IEnumerable<ChoiceSetting> ChoicesFor(TweakCategory category) => Choices.Where(c => c.Category == category);
+
+    private static ChoiceOption WindowMode(string label, int mode) =>
+        new(label, ctx => new[]
+        {
+            Change.Ini(ctx.Paths.GameUserSettings, Gus, "FullscreenMode", mode.ToString()),
+            Change.Ini(ctx.Paths.GameUserSettings, Gus, "LastConfirmedFullscreenMode", mode.ToString()),
+            Change.Ini(ctx.Paths.GameUserSettings, Gus, "PreferredFullscreenMode", mode.ToString())
+        });
+
+    private static IReadOnlyList<Change> Resolution(AeoxContext ctx, int w, int h) => new[]
+    {
+        Change.Ini(ctx.Paths.GameUserSettings, Gus, "ResolutionSizeX", w.ToString()),
+        Change.Ini(ctx.Paths.GameUserSettings, Gus, "ResolutionSizeY", h.ToString()),
+        Change.Ini(ctx.Paths.GameUserSettings, Gus, "LastUserConfirmedResolutionSizeX", w.ToString()),
+        Change.Ini(ctx.Paths.GameUserSettings, Gus, "LastUserConfirmedResolutionSizeY", h.ToString()),
+        Change.Ini(ctx.Paths.GameUserSettings, Gus, "DesiredScreenWidth", w.ToString()),
+        Change.Ini(ctx.Paths.GameUserSettings, Gus, "DesiredScreenHeight", h.ToString()),
+        Change.Ini(ctx.Paths.GameUserSettings, Gus, "LastUserConfirmedDesiredScreenWidth", w.ToString()),
+        Change.Ini(ctx.Paths.GameUserSettings, Gus, "LastUserConfirmedDesiredScreenHeight", h.ToString())
+    };
+
+    private static ChoiceOption RenderScale(int percent) =>
+        new($"{percent}%", ctx => new[]
+        {
+            Change.Ini(ctx.Paths.GameUserSettings, Scalability, "sg.ResolutionQuality", $"{percent}.000000")
+        });
 }

@@ -3,7 +3,7 @@ using Aeox.Core.Tweaks;
 
 namespace Aeox.App.ViewModels;
 
-public sealed class TweakItem : Observable
+public sealed class TweakItem : Observable, ISettingItem
 {
     private readonly Action _onChanged;
     private bool _isOn;
@@ -23,6 +23,8 @@ public sealed class TweakItem : Observable
     public string Title => Tweak.Title;
     public string Description => Tweak.Description;
     public string Glyph => Tweak.Glyph;
+    public bool IsActive => _isApplied;
+    public bool IsReverting => !_isOn && _isApplied;
 
     public bool IsOn
     {
@@ -33,16 +35,15 @@ public sealed class TweakItem : Observable
         }
     }
 
-    public bool IsApplied
+    public IEnumerable<(string Source, IReadOnlyList<Change> Changes, bool Enabled)> Desired()
     {
-        get => _isApplied;
-        set => Set(ref _isApplied, value);
+        yield return (Title, Changes, IsOn);
     }
 
-    public void Sync(bool applied)
+    public void Resync(AeoxContext ctx, ChangeEngine engine)
     {
-        IsApplied = applied;
-        _isOn = applied;
+        _isApplied = engine.IsApplied(Changes);
+        _isOn = _isApplied;
         Raise(nameof(IsOn));
     }
 }

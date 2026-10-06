@@ -49,6 +49,11 @@ public partial class MainWindow : Window
         MaxButton.ToolTip = WindowState == WindowState.Maximized ? "Restore" : "Maximize";
     }
 
+    private void Nav_Checked(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.RadioButton { CommandParameter: string page } && _vm is not null) _vm.Page = page;
+    }
+
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void Maximize_Click(object sender, RoutedEventArgs e) =>

@@ -39,7 +39,7 @@ public sealed class CoreTests : IDisposable
     private ChangeEngine NewEngine() => new(new OriginalStore(Path.Combine(_ctx.DataDir, "originals.json")));
 
     private IEnumerable<(string, IReadOnlyList<Change>, bool)> Desired(bool enabled) =>
-        TweakCatalog.All.Select(t => (t.Title, t.Changes(_ctx), enabled));
+        TweakCatalog.For(TweakCategory.Performance).Select(t => (t.Title, t.Changes(_ctx), enabled));
 
     [Fact]
     public void IniSetKeepsOtherLinesAndAddsMissingSection()
@@ -65,7 +65,7 @@ public sealed class CoreTests : IDisposable
         Assert.Equal("0", IniDocument.Load(_ctx.Paths.Engine).Get(RetracGame.ConsoleVariablesSection, "grass.Enable"));
         Assert.Equal("2", IniDocument.Load(_ctx.Paths.GameUserSettings).Get(RetracGame.UserSettingsSection, "LatencyTweak2"));
         Assert.True(new FileInfo(_ctx.Paths.GameUserSettings).IsReadOnly);
-        Assert.All(TweakCatalog.All, t => Assert.True(engine.IsApplied(t.Changes(_ctx)), t.Id));
+        Assert.All(TweakCatalog.For(TweakCategory.Performance), t => Assert.True(engine.IsApplied(t.Changes(_ctx)), t.Id));
         Assert.Empty(engine.Plan(Desired(true)));
 
         var reloaded = NewEngine();
@@ -82,7 +82,7 @@ public sealed class CoreTests : IDisposable
         var engine = NewEngine();
         engine.Apply(engine.Plan(Desired(true)));
 
-        var desired = TweakCatalog.All.Select(t => (t.Title, t.Changes(_ctx), t.Id != "uncapped-fps"));
+        var desired = TweakCatalog.For(TweakCategory.Performance).Select(t => (t.Title, t.Changes(_ctx), t.Id != "uncapped-fps"));
         var plan = engine.Plan(desired);
 
         Assert.Single(plan);
@@ -111,6 +111,25 @@ public sealed class CoreTests : IDisposable
         engine.Apply(plan);
         Assert.Null(IniDocument.Load(_ctx.Paths.Engine).Get(RetracGame.ConsoleVariablesSection, "grass.Enable"));
         Assert.Equal("True", IniDocument.Load(_ctx.Paths.GameUserSettings).Get(RetracGame.UserSettingsSection, "bShowGrass"));
+    }
+
+    [Fact]
+    public void ChoiceDetectsAndAppliesSelectedOption()
+    {
+        var engine = NewEngine();
+        var mode = TweakCatalog.Choices.Single(c => c.Id == "window-mode");
+        Assert.Equal(0, mode.DetectSelected(_ctx, engine));
+
+        var fullscreen = mode.Options.Single(o => o.Label == "Fullscreen");
+        engine.Apply(engine.Plan(new[] { ("Window mode", fullscreen.Changes(_ctx), true) }));
+
+        Assert.Equal("Fullscreen", mode.Options[mode.DetectSelected(_ctx, engine)].Label);
+        Assert.Equal("0", IniDocument.Load(_ctx.Paths.GameUserSettings).Get(RetracGame.UserSettingsSection, "PreferredFullscreenMode"));
+
+        var scale = TweakCatalog.Choices.Single(c => c.Id == "render-scale");
+        var seventyFive = scale.Options.Single(o => o.Label == "75%");
+        engine.Apply(engine.Plan(new[] { ("Render scale", seventyFive.Changes(_ctx), true) }));
+        Assert.Equal("75.000000", IniDocument.Load(_ctx.Paths.GameUserSettings).Get(RetracGame.ScalabilitySection, "sg.ResolutionQuality"));
     }
 
     [Fact]

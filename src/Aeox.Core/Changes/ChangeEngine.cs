@@ -21,6 +21,7 @@ public sealed class ChangeEngine
             ? (new FileInfo(change.Target).IsReadOnly ? "true" : "false")
             : null,
         ChangeKind.Registry => ReadRegistry(change.Target, change.Key),
+        ChangeKind.PowerPlan => Aeox.Core.Windows.PowerPlans.GetActive(),
         _ => null
     };
 
@@ -105,6 +106,17 @@ public sealed class ChangeEngine
         foreach (var (file, value) in readOnlyTargets)
         {
             if (File.Exists(file)) SetReadOnly(file, value == "true");
+        }
+
+        foreach (var p in plan.Where(p => p.Change.Kind == ChangeKind.PowerPlan && p.NewValue is not null))
+        {
+            Aeox.Core.Windows.PowerPlans.SetActive(p.NewValue!);
+        }
+
+        if (plan.Any(p => p.Change.Kind == ChangeKind.Registry &&
+                          string.Equals(p.Change.Target, Aeox.Core.Windows.MouseSettings.RegistryPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            Aeox.Core.Windows.MouseSettings.PushRegistryToSession();
         }
     }
 

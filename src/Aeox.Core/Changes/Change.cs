@@ -4,7 +4,8 @@ public enum ChangeKind
 {
     Ini,
     Registry,
-    FileReadOnly
+    FileReadOnly,
+    PowerPlan
 }
 
 public sealed record Change(ChangeKind Kind, string Target, string Section, string Key, string? Value, string? Default = null)
@@ -21,6 +22,9 @@ public sealed record Change(ChangeKind Kind, string Target, string Section, stri
 
     public static Change Registry(string keyPath, string valueName, string? value, string? systemDefault = null) =>
         new(ChangeKind.Registry, keyPath, string.Empty, valueName, value, systemDefault);
+
+    public static Change PowerPlan(string schemeGuid, string defaultGuid) =>
+        new(ChangeKind.PowerPlan, "power", string.Empty, "active-scheme", schemeGuid, defaultGuid);
 }
 
 public enum RevertKind

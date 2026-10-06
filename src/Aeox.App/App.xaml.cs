@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Threading;
 using System.Windows;
 
@@ -12,6 +13,8 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         _instance = new Mutex(true, InstanceName, out var isFirst);
         if (!isFirst)
         {

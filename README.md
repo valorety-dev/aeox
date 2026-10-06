@@ -1,45 +1,28 @@
 # aeox
 
-FPS tweaker for Fortnite and Retrac. Windows 10/11, free.
+free fps tools for fortnite and retrac. windows 10/11.
 
-It checks what costs you frames, shows the exact lines it's about to write before it writes them, and saves every original value so you can put everything back with one button.
+## tools
 
-## what's in it
+aeox - the main one. checks what costs you frames, shows the exact lines before it writes anything, and keeps every original value so one button puts it all back. checkup, performance, visuals, system, network, stats per match, and a tray mode that re-applies your settings if the game or a driver resets them.
 
-- **checkup**: refresh rate, RAM speed, power plan, GPU assignment, optimizer leftovers, background apps, Wi-Fi
-- **performance**: uncapped fps, vsync off, reflex, low presets, grass off, settings lock
-- **visuals**: window mode, stretched res, render scale, performance mode (live fortnite)
-- **system**: dedicated gpu, fullscreen optimizations, game mode, raw mouse, power plan
-- **network**: pings your router and the match server so you know if it's your wi-fi
-- **stats**: fps / stutter / ping per match, read from the game's own logs
-- **tray**: puts your settings back if the game or a driver resets them
+aeox driver - shows your installed gpu driver next to the newest one and how your fps, hitches and crashes looked on every driver you've played on (read from the game's own logs). release notes and downloads open nvidia's site, nothing gets installed for you.
 
-## what it doesn't do
+aeox scan - your pc as a 3d scene. the part holding your fps back lights up, worked out from frame times in your last 10 matches, not from a parts list. save card makes a picture of your setup.
 
-No game file edits, nothing near the anti-cheat, no Engine.ini on live Fortnite, no registry placebo, no telemetry.
+## what it won't do
+
+no game file edits, nothing near the anti-cheat, no engine.ini on live fortnite, no registry placebo, no telemetry.
 
 ## build
 
-Needs the .NET 9 SDK.
+.net 9 sdk.
 
 ```
 dotnet test tests/Aeox.Core.Tests
 dotnet publish src/Aeox.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o dist
 ```
 
-`dist/Aeox.exe` is the whole app.
+same for src/Aeox.Driver and src/Aeox.Scan. scan needs the webview2 runtime, which windows 11 already has.
 
-## layout
-
-- `src/Aeox.Core`: settings files, change engine, backups, checks, stats
-- `src/Aeox.App`: the WPF app
-- `tests/Aeox.Core.Tests`: apply/restore round trips on temp files
-- `website`: aeox site, static
-
-Aeox keeps its data in `%LOCALAPPDATA%\Aeox`. Delete that folder after a restore and it's gone.
-
-Michroma font by the Michroma Project Authors, SIL Open Font License 1.1.
-
-Not affiliated with Epic Games or Retrac.
-
-made by valorety · [buy me a coffee](https://buymeacoffee.com/valorety)
+data lives in %LOCALAPPDATA%\Aeox. delete that folder after a restore and it's gone.

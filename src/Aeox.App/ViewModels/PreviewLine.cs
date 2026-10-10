@@ -29,4 +29,7 @@ public sealed record PreviewToken(string Text, TokenKind Kind)
     private static Brush Res(string key) => (Brush)System.Windows.Application.Current.Resources[key];
 }
 
-public sealed record PreviewLine(int Number, IReadOnlyList<PreviewToken> Tokens, bool GapBefore);
+public sealed record PreviewLine(int Number, IReadOnlyList<PreviewToken> Tokens, bool GapBefore)
+{
+    public override string ToString() => string.Concat(Tokens.Select(t => t.Text));
+}

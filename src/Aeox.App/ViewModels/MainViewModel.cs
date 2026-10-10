@@ -83,11 +83,34 @@ public sealed class MainViewModel : Observable
         ?? _games.FirstOrDefault(g => string.Equals(g.Paths.SavedDir, savedDir, StringComparison.OrdinalIgnoreCase))?.ShortName
         ?? "Fortnite";
 
+    public ObservableCollection<GameRow> GameRows { get; } = new();
+
+    public string CurrentGameLabel => Ctx.Game.Label;
+
+    public string GamesSummary
+    {
+        get
+        {
+            var found = GameRows.Count(r => r.IsInstalled);
+            return $"{found} of {GameRows.Count} supported games found on this pc.";
+        }
+    }
+
     private void RebuildGameChoices()
     {
         Games.Clear();
         foreach (var g in _games.Where(g => g.IsInstalled || g.Id == Ctx.Game.Id || g.Id == GameProfile.RetracId || g.Id == GameProfile.LiveId))
             Games.Add(new GameChoice(g, g.Id == Ctx.Game.Id, SelectGame));
+        GameRows.Clear();
+        foreach (var g in _games.OrderByDescending(g => g.IsInstalled).ThenBy(g => g.IsFortnite ? 0 : 1).ThenBy(g => g.Name))
+            GameRows.Add(new GameRow(g, g.Id == Ctx.Game.Id, OpenGame));
+        Raise(nameof(GamesSummary));
+    }
+
+    private void OpenGame(GameProfile game)
+    {
+        SelectGame(game);
+        Page = "Game";
     }
 
     private void ReloadGames()
@@ -175,6 +198,8 @@ public sealed class MainViewModel : Observable
         Settings.Save();
         BuildForGame(game);
         foreach (var c in Games) c.SetSilently(c.Profile.Id == game.Id);
+        foreach (var r in GameRows) r.SetCurrent(r.Profile.Id == game.Id);
+        if (!game.IsFortnite && Page == "Stats") Page = "Game";
         if (Page == "Stats") _ = Stats.LoadAsync();
         _justApplied = 0;
         _justRestored = null;
@@ -186,11 +211,12 @@ public sealed class MainViewModel : Observable
         Ctx = new AeoxContext(game, _hardware, AeoxContext.DefaultDataDir());
         Pages = new[]
         {
-            BuildPage(TweakCategory.Performance, "Performance", "03", "more fps, less delay."),
-            BuildPage(TweakCategory.Visuals, "Visuals", "04", "how the game is displayed."),
-            BuildPage(TweakCategory.System, "System", "06", "windows settings that affect the game.")
+            BuildPage("Game", "03", game.Label, game.Note ?? (game.IsFortnite ? "more fps, less delay." : "settings this game reads from its own files."),
+                (TweakCategory.Performance, "performance"), (TweakCategory.Visuals, "display")),
+            BuildPage("System", "04", "windows", "windows settings for every game. the gpu and fullscreen ones apply to " + game.ShortName + ".",
+                (TweakCategory.System, null))
         };
-        NetworkTweaks = BuildPage(TweakCategory.Network, "Network", "05", "internet tweaks");
+        NetworkTweaks = BuildPage("Network", "05", "network", "internet tweaks", (TweakCategory.Network, null));
         Network = new NetworkViewModel(Ctx);
         Raise(nameof(Ctx));
         Raise(nameof(Pages));
@@ -201,6 +227,8 @@ public sealed class MainViewModel : Observable
         Raise(nameof(CurrentPage));
         Raise(nameof(GameText));
         Raise(nameof(GameDetail));
+        Raise(nameof(StatsAvailable));
+        Raise(nameof(CurrentGameLabel));
         Raise(nameof(ConfigText));
     }
     public ObservableCollection<PreviewLine> Preview { get; } = new();
@@ -246,7 +274,7 @@ public sealed class MainViewModel : Observable
     {
         get
         {
-            var tagged = TweakCatalog.All.Where(t => t.IsSupported(Ctx) && t.Tag(Ctx) is not null).Select(t => $"{t.Title} ({t.Tag(Ctx)})").ToList();
+            var tagged = AllTweaks.Where(t => t.IsSupported(Ctx) && t.Tag(Ctx) is not null).Select(t => $"{t.Title} ({t.Tag(Ctx)})").ToList();
             return tagged.Count == 0 ? "No hardware-specific extras for this PC." : "Unlocked for this PC: " + string.Join(",  ", tagged) + ".";
         }
     }
@@ -255,7 +283,7 @@ public sealed class MainViewModel : Observable
     {
         get
         {
-            var hidden = TweakCatalog.All.Count(t => !t.IsSupported(Ctx));
+            var hidden = AllTweaks.Count(t => !t.IsSupported(Ctx));
             return hidden == 0 ? string.Empty : $"{hidden} tweak{(hidden == 1 ? " is" : "s are")} hidden because {(hidden == 1 ? "it does" : "they do")} not fit this PC or game.";
         }
     }
@@ -269,7 +297,7 @@ public sealed class MainViewModel : Observable
             if (item is TweakItem { IsRecommended: true } t) t.IsOn = true;
             if (item is ChoiceItem c) c.PickRecommended();
         }
-        Page = "Performance";
+        Page = "Game";
     }
 
     public string Page
@@ -284,6 +312,7 @@ public sealed class MainViewModel : Observable
             Raise(nameof(IsSettingsPage));
             Raise(nameof(IsCheckupPage));
             Raise(nameof(IsStatsPage));
+            Raise(nameof(IsGamesPage));
             if (value == "Stats") _ = Stats.LoadAsync();
             if (value == "Checkup" && Checkup is { HasRun: true }) _ = Checkup.RunAsync();
         }
@@ -291,6 +320,14 @@ public sealed class MainViewModel : Observable
 
     public PageViewModel? CurrentPage => Pages.FirstOrDefault(p => p.Key == Page);
     public bool IsTweakPage => CurrentPage is not null;
+    public bool IsGamesPage => Page == "Games";
+    public bool StatsAvailable => Ctx.Game.IsFortnite;
+
+    private IEnumerable<Tweak> GameTweaks => Ctx.Game.Tweaks?.Invoke(Ctx) ?? Array.Empty<Tweak>();
+
+    private IEnumerable<Tweak> AllTweaks =>
+        (Ctx.Game.IsFortnite ? TweakCatalog.All : TweakCatalog.All.Where(t => t.Category is TweakCategory.System or TweakCategory.Network))
+        .Concat(GameTweaks);
     public bool IsNetworkPage => Page == "Network";
     public bool IsSettingsPage => Page == "Settings";
     public bool IsCheckupPage => Page == "Checkup";
@@ -325,14 +362,25 @@ public sealed class MainViewModel : Observable
         ? "Nothing changed yet."
         : $"{Engine.Store.All.Count} original values saved. Restore puts every one of them back.";
 
-    private PageViewModel BuildPage(TweakCategory category, string title, string number, string subtitle)
+    private PageViewModel BuildPage(string key, string number, string title, string subtitle, params (TweakCategory Category, string? Header)[] sections)
     {
         var items = new List<object>();
-        items.AddRange(TweakCatalog.ChoicesFor(category).Where(c => c.IsSupported(Ctx)).Select(c => new ChoiceItem(c, Ctx, Engine, OnItemChanged)));
-        items.AddRange(TweakCatalog.For(category)
-            .Where(t => t.IsSupported(Ctx))
-            .Select(t => new TweakItem(t, Ctx, Engine.IsApplied(t.Changes(Ctx)), OnItemChanged)));
-        return new PageViewModel(title, number, title.ToLowerInvariant(), subtitle, items);
+        var gameTweaks = GameTweaks.ToList();
+        foreach (var (category, header) in sections)
+        {
+            var section = new List<object>();
+            var shared = category is TweakCategory.System or TweakCategory.Network || Ctx.Game.IsFortnite;
+            if (Ctx.Game.IsFortnite)
+                section.AddRange(TweakCatalog.ChoicesFor(category).Where(c => c.IsSupported(Ctx)).Select(c => new ChoiceItem(c, Ctx, Engine, OnItemChanged)));
+            var tweaks = shared ? TweakCatalog.For(category) : Enumerable.Empty<Tweak>();
+            section.AddRange(tweaks.Concat(gameTweaks.Where(t => t.Category == category))
+                .Where(t => t.IsSupported(Ctx))
+                .Select(t => new TweakItem(t, Ctx, Engine.IsApplied(t.Changes(Ctx)), OnItemChanged)));
+            if (section.Count == 0) continue;
+            if (header is not null) items.Add(new SectionHeader(header));
+            items.AddRange(section);
+        }
+        return new PageViewModel(key, number, title, subtitle, items);
     }
 
     private void OnItemChanged()
@@ -354,7 +402,7 @@ public sealed class MainViewModel : Observable
 
     private void UpdateStatus()
     {
-        if (!Ctx.Paths.ConfigExists)
+        if (!Ctx.Game.ConfigExists && (Ctx.Game.IsFortnite || Ctx.Game.SettingsFiles.Count > 0))
         {
             SetStatus(StatusKind.Error, $"{Ctx.Game.ShortName} settings not found", $"Launch {Ctx.Game.ShortName} once so the game creates its settings files.");
             return;
@@ -429,7 +477,7 @@ public sealed class MainViewModel : Observable
 
     public int ReapplyRemembered()
     {
-        if (RetracGame.IsGameRunning() || !Ctx.Paths.ConfigExists) return 0;
+        if (RetracGame.IsGameRunning() || !Ctx.Game.ConfigExists) return 0;
         var prefix = Ctx.Game.Id + "|";
         var desired = new List<(string, IReadOnlyList<Change>, bool)>();
         foreach (var id in Settings.ActiveIds.Where(i => i.StartsWith(prefix, StringComparison.Ordinal)))
@@ -437,7 +485,7 @@ public sealed class MainViewModel : Observable
             var parts = id[prefix.Length..].Split(':', 3);
             if (parts[0] == "tweak")
             {
-                var tweak = TweakCatalog.All.FirstOrDefault(t => t.Id == parts[1]);
+                var tweak = AllTweaks.FirstOrDefault(t => t.Id == parts[1]);
                 if (tweak is not null && tweak.IsSupported(Ctx) && (Elevation.IsAdmin || !tweak.Changes(Ctx).Any(c => c.NeedsAdmin)))
                     desired.Add((tweak.Title, tweak.Changes(Ctx), true));
             }
@@ -708,4 +756,44 @@ public sealed class GameChoice : Observable
         _isSelected = value;
         Raise(nameof(IsSelected));
     }
+}
+
+public sealed record SectionHeader(string Text);
+
+public sealed class GameRow : Observable
+{
+    private bool _isCurrent;
+
+    public GameRow(GameProfile profile, bool current, Action<GameProfile> open)
+    {
+        Profile = profile;
+        _isCurrent = current;
+        IsInstalled = profile.IsInstalled;
+        OpenCommand = new RelayCommand(() => open(profile), () => IsInstalled);
+    }
+
+    public GameProfile Profile { get; }
+    public string Title => Profile.IsFortnite && !Profile.IsLive ? $"{Profile.ShortName} {Profile.Version}".Trim() : Profile.Name;
+    public bool IsInstalled { get; }
+    public ICommand OpenCommand { get; }
+
+    public string Detail
+    {
+        get
+        {
+            if (!IsInstalled) return "not found on this pc";
+            if (Profile.IsFortnite) return Profile.IsLive ? "fortnite  ·  game settings and windows tweaks" : $"fortnite build  ·  {Profile.Season ?? "og"}";
+            return Profile.Tweaks is null ? "windows tweaks for this game" : "game settings and windows tweaks";
+        }
+    }
+
+    public string Tag => Profile.IsFortnite ? "fn" : string.Concat(Profile.ShortName.Where(char.IsLetterOrDigit).Take(2)).ToLowerInvariant();
+
+    public bool IsCurrent
+    {
+        get => _isCurrent;
+        private set => Set(ref _isCurrent, value);
+    }
+
+    public void SetCurrent(bool value) => IsCurrent = value;
 }

@@ -53,6 +53,8 @@ public static partial class GameCatalog
             var saved = game.SavedDir is { } s && Directory.Exists(s) ? s : GuessSavedDir(name);
             list.Add(new GameProfile("og-" + Hash(exe), name, ReadVersion(exe), false, new GamePaths(saved), () => File.Exists(exe) ? exe : null));
         }
+        var exes = OtherGames.ConfigStoreExes().Concat(known.Select(k => k.Exe)).ToList();
+        foreach (var def in OtherGames.All) list.Add(OtherGames.Profile(def, exes));
         return list;
     }
 

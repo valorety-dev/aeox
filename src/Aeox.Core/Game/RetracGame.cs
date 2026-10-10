@@ -56,29 +56,38 @@ public sealed class GameProfile
     public string? Version { get; }
     public bool IsLive { get; }
     public GamePaths Paths { get; }
+    public bool IsFortnite { get; init; } = true;
+    public IReadOnlyList<string> SettingsFiles { get; init; } = Array.Empty<string>();
+    public Func<Aeox.Core.Tweaks.AeoxContext, IReadOnlyList<Aeox.Core.Tweaks.Tweak>>? Tweaks { get; init; }
+    public string? Note { get; init; }
+
+    public bool ConfigExists => IsFortnite ? Paths.ConfigExists : SettingsFiles.Any(File.Exists);
+
+    public string ConfigLocation => IsFortnite ? Paths.ConfigDir
+        : SettingsFiles.Count == 0 ? "No settings file. Aeox only sets Windows options for this game." : string.Join(Environment.NewLine, SettingsFiles);
 
     public double? VersionNumber =>
         Version is not null && double.TryParse(Version, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
 
     public string? Season => IsLive ? null : GameCatalog.SeasonFor(VersionNumber);
 
-    public string Name => IsLive
+    public string Name => !IsFortnite ? ShortName : IsLive
         ? "Fortnite  ·  Epic Games"
         : $"{ShortName}  ·  Fortnite {Version ?? "unknown version"}" + (Season is null ? string.Empty : $"  ·  {Season}");
 
-    public string Label => IsLive ? "fortnite" : Version is null ? ShortName.ToLowerInvariant() : $"{ShortName.ToLowerInvariant()} {Version}";
+    public string Label => !IsFortnite ? ShortName.ToLowerInvariant() : IsLive ? "fortnite" : Version is null ? ShortName.ToLowerInvariant() : $"{ShortName.ToLowerInvariant()} {Version}";
 
-    public bool SupportsEngineTweaks => !IsLive && (VersionNumber is null || VersionNumber < 19);
+    public bool SupportsEngineTweaks => IsFortnite && !IsLive && (VersionNumber is null || VersionNumber < 19);
 
-    public bool HasPerformanceMode => IsLive || VersionNumber >= 19;
+    public bool HasPerformanceMode => IsFortnite && IsLive || VersionNumber >= 19;
 
-    public bool SupportsReflex => IsLive || VersionNumber is null || VersionNumber >= 14.1;
+    public bool SupportsReflex => !IsFortnite || IsLive || VersionNumber is null || VersionNumber >= 14.1;
 
     public string HistoryKey => GameCatalog.HistoryKey(Paths.SavedDir);
 
     public string? FindExe() => _findExe();
 
-    public bool IsInstalled => Paths.ConfigExists || FindExe() is not null;
+    public bool IsInstalled => ConfigExists || FindExe() is not null;
 
     public static GameProfile Retrac(string? savedDir = null) => new(
         RetracId, "Retrac", "14.60", false,

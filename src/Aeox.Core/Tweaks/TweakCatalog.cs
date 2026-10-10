@@ -169,11 +169,11 @@ public static class TweakCatalog
             },
             ctx => ctx.GameExe is not null && ctx.Hardware.HasMultipleGpus,
             tag: _ => "2 gpus",
-            describe: _ => "Fortnite always runs on your graphics card, never the built-in graphics."),
+            describe: ctx => $"{ctx.Game.ShortName} always runs on your graphics card, never the built-in graphics."),
 
         new("no-fso", TweakCategory.System,
             "Disable fullscreen optimizations",
-            "True exclusive fullscreen for Fortnite.",
+            "True exclusive fullscreen for the game.",
             "\uE8A7",
             ctx => new[]
             {

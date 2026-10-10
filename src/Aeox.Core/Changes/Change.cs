@@ -6,7 +6,8 @@ public enum ChangeKind
     Registry,
     FileReadOnly,
     PowerPlan,
-    Adapter
+    Adapter,
+    Text
 }
 
 public sealed record Change(ChangeKind Kind, string Target, string Section, string Key, string? Value, string? Default = null)
@@ -26,6 +27,9 @@ public sealed record Change(ChangeKind Kind, string Target, string Section, stri
 
     public static Change Registry(string keyPath, string valueName, string? value, string? systemDefault = null) =>
         new(ChangeKind.Registry, keyPath, string.Empty, valueName, value, systemDefault);
+
+    public static Change Text(string file, string format, string key, string? value, string? gameDefault = null) =>
+        new(ChangeKind.Text, file, format, key, value, gameDefault);
 
     public static Change Adapter(string keyPath, string deviceId, string keyword, string? value, string? driverDefault = null) =>
         new(ChangeKind.Adapter, keyPath, deviceId, keyword, value, driverDefault);

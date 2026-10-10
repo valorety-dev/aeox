@@ -63,6 +63,10 @@
             </DataTemplate.Triggers>
         </DataTemplate>
 
+        <DataTemplate DataType="{x:Type vm:SectionHeader}">
+            <TextBlock Text="{Binding Text}" Style="{StaticResource SectionLabel}" Margin="0,22,0,2" />
+        </DataTemplate>
+
         <DataTemplate DataType="{x:Type vm:ChoiceItem}">
             <Border Style="{StaticResource Row}">
                 <StackPanel>
@@ -106,28 +110,21 @@
                     <TextBlock Text="A&#x200A;E&#x200A;O&#x200A;X" FontFamily="{StaticResource BrandFont}" FontSize="14" VerticalAlignment="Center" Margin="24,0,0,0" />
                 </Border>
 
-                <StackPanel Grid.Row="1" Margin="24,22,20,20">
-                    <TextBlock Text="game" Style="{StaticResource SectionLabel}" Margin="0,0,0,8" />
-                    <ItemsControl ItemsSource="{Binding Games}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:GameChoice}">
-                                <RadioButton Style="{StaticResource Segment}" GroupName="Game" Content="{Binding Label}" ToolTip="{Binding Tip}" IsChecked="{Binding IsSelected, Mode=TwoWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,0,0,-1" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <Button Style="{StaticResource GhostButton}" Height="24" Padding="8,0" FontSize="11.5" Content="+ add game" Command="{Binding AddGameCommand}" />
-                        <Button Style="{StaticResource GhostButton}" Height="24" Padding="8,0" FontSize="11.5" Content="{Binding FindGamesText}" Command="{Binding FindGamesCommand}" Margin="6,0,0,0" />
+                <Border Grid.Row="1" Margin="24,22,20,18" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" Padding="12,10">
+                    <StackPanel>
+                        <TextBlock Text="playing" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding CurrentGameLabel}" FontWeight="Bold" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                        <Button Style="{StaticResource GhostButton}" Height="24" Padding="8,0" FontSize="11.5" Content="change game" Command="{Binding NavigateCommand}" CommandParameter="Games" HorizontalAlignment="Left" Margin="0,8,0,0" />
                     </StackPanel>
-                </StackPanel>
+                </Border>
 
                 <StackPanel Grid.Row="2" Margin="12,0">
-                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="01" Content="checkup" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Checkup}" CommandParameter="Checkup" />
-                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="02" Content="stats" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Stats}" CommandParameter="Stats" />
-                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="03" Content="performance" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Performance}" CommandParameter="Performance" />
-                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="04" Content="visuals" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Visuals}" CommandParameter="Visuals" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="01" Content="home" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Checkup}" CommandParameter="Checkup" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="02" Content="games" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Games}" CommandParameter="Games" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="03" Content="{Binding CurrentGameLabel}" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Game}" CommandParameter="Game" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="04" Content="windows" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=System}" CommandParameter="System" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="05" Content="network" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Network}" CommandParameter="Network" />
-                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="06" Content="system" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=System}" CommandParameter="System" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="06" Content="stats" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Stats}" CommandParameter="Stats" Visibility="{Binding StatsAvailable, Converter={StaticResource BoolToVis}}" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="07" Content="settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
                 </StackPanel>
 
@@ -151,10 +148,62 @@
                             <TextBlock>
                                 <Run Text="{Binding Number, Mode=OneWay}" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="{Binding Title, Mode=OneWay}" FontWeight="Bold" />
                             </TextBlock>
-                            <TextBlock Text="{Binding Subtitle}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
+                            <TextBlock Text="{Binding Subtitle}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                     <ItemsControl ItemsSource="{Binding Items}" Focusable="False" Margin="36,4,36,0" MaxWidth="680" HorizontalAlignment="Left" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsGamesPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock><Run Text="02" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="games" FontWeight="Bold" /></TextBlock>
+                            <TextBlock Text="{Binding GamesSummary}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Margin="36,18,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Style="{StaticResource GhostButton}" Height="26" Padding="10,0" FontSize="12" Content="{Binding FindGamesText}" Command="{Binding FindGamesCommand}" />
+                            <Button Style="{StaticResource GhostButton}" Height="26" Padding="10,0" FontSize="12" Content="+ add fortnite build" Command="{Binding AddGameCommand}" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding GameRows}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:GameRow}">
+                                    <Border x:Name="RowBorder" Style="{StaticResource Row}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="46" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="32" Height="32" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" HorizontalAlignment="Left">
+                                                <TextBlock x:Name="TagText" Text="{Binding Tag}" FontSize="11.5" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                <TextBlock x:Name="TitleText" Text="{Binding Title}" />
+                                                <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
+                                            </StackPanel>
+                                            <Button x:Name="OpenButton" Grid.Column="2" Style="{StaticResource GhostButton}" Height="26" Padding="10,0" FontSize="12" Content="open" Command="{Binding OpenCommand}" VerticalAlignment="Center" Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}" />
+                                        </Grid>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsInstalled}" Value="False">
+                                            <Setter TargetName="TitleText" Property="Foreground" Value="{StaticResource FaintBrush}" />
+                                            <Setter TargetName="TagText" Property="Foreground" Value="{StaticResource FaintBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                            <Setter TargetName="TitleText" Property="FontWeight" Value="Bold" />
+                                            <Setter TargetName="TagText" Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                            <Setter TargetName="OpenButton" Property="Content" Value="current" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="aeox only edits the settings files a game's own menu writes, and windows options. it never touches game files or memory, so anti-cheat has nothing to flag." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,18,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
 
@@ -162,7 +211,7 @@
                 <StackPanel DataContext="{Binding Checkup}">
                     <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
                         <StackPanel>
-                            <TextBlock><Run Text="01" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="checkup" FontWeight="Bold" /></TextBlock>
+                            <TextBlock><Run Text="01" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="home" FontWeight="Bold" /></TextBlock>
                             <TextBlock Text="{Binding Summary}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
                         </StackPanel>
                     </Border>
@@ -214,7 +263,7 @@
                 <StackPanel DataContext="{Binding Stats}">
                     <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
                         <StackPanel>
-                            <TextBlock><Run Text="02" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="stats" FontWeight="Bold" /></TextBlock>
+                            <TextBlock><Run Text="06" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="stats" FontWeight="Bold" /></TextBlock>
                             <TextBlock Text="{Binding Headline}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>

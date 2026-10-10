@@ -21,6 +21,7 @@ public sealed class ChangeEngine
             ? (new FileInfo(change.Target).IsReadOnly ? "true" : "false")
             : null,
         ChangeKind.Registry or ChangeKind.Adapter => ReadRegistry(change.Target, change.Key),
+        ChangeKind.Text => TextSettings.Get(change.Target, change.Section, change.Key),
         ChangeKind.PowerPlan => Aeox.Core.Windows.PowerPlans.GetActive(),
         _ => null
     };
@@ -104,6 +105,15 @@ public sealed class ChangeEngine
                 else doc.Set(p.Change.Section, p.Change.Key, p.NewValue);
             }
             doc.Save(file);
+            if (wasReadOnly && !readOnlyTargets.ContainsKey(file)) SetReadOnly(file, true);
+        }
+
+        foreach (var group in plan.Where(p => p.Change.Kind == ChangeKind.Text).GroupBy(p => p.Change.Target, StringComparer.OrdinalIgnoreCase))
+        {
+            var file = group.Key;
+            var wasReadOnly = File.Exists(file) && new FileInfo(file).IsReadOnly;
+            if (wasReadOnly) File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            TextSettings.Apply(file, group.Select(p => (p.Change.Section, p.Change.Key, p.NewValue)));
             if (wasReadOnly && !readOnlyTargets.ContainsKey(file)) SetReadOnly(file, true);
         }
 

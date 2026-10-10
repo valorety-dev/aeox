@@ -76,17 +76,12 @@ function hfov() {
 }
 
 const canvas = $("scene");
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance", stencil: false, depth: true });
+renderer.setPixelRatio(1);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMappingExposure = 1.35;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1d1d20);
-scene.fog = new THREE.Fog(0x1d1d20, 45, 95);
 
 const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 200);
 camera.position.set(0, 1.7, 7);
@@ -110,26 +105,24 @@ function gridTexture(size, cells, base, line, repeatX, repeatY) {
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(repeatX, repeatY);
-  t.anisotropy = 8;
+  t.anisotropy = 2;
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 
 function surface(w, h, base, line, cell) {
-  return new THREE.MeshStandardMaterial({ map: gridTexture(512, 4, base, line, w / (cell * 4), h / (cell * 4)), roughness: 0.92, metalness: 0 });
+  return new THREE.MeshBasicMaterial({ map: gridTexture(256, 4, base, line, w / (cell * 4), h / (cell * 4)) });
 }
 
 function room() {
   const g = new THREE.Group();
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), surface(80, 80, "#3a3a40", "#5b5b65", 2.5));
   floor.rotation.x = -Math.PI / 2;
-  floor.receiveShadow = true;
   g.add(floor);
   const wall = (w, h, x, y, z, ry) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), surface(w, h, "#38383e", "#4d4d56", 1.3));
     m.position.set(x, y, z);
     m.rotation.y = ry;
-    m.receiveShadow = true;
     g.add(m);
   };
   wall(30, 14, 0, 7, -22, 0);
@@ -140,7 +133,6 @@ function room() {
   const block = (w, h, d, x, z) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), surface(Math.max(w, d), h, "#3b3b42", "#52525b", 1.3));
     m.position.set(x, h / 2, z);
-    m.castShadow = m.receiveShadow = true;
     g.add(m);
   };
   block(6, 4, 10, -12, -16);
@@ -150,19 +142,14 @@ function room() {
 }
 scene.add(room());
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x3a3a42, 1.5));
-scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-const sun = new THREE.DirectionalLight(0xffffff, 1.3);
-sun.position.set(6, 18, 10);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -30; sun.shadow.camera.right = 30; sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
-sun.shadow.radius = 6;
+scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(-4, 10, 8);
 scene.add(sun);
 
-const sphereGeo = new THREE.SphereGeometry(1, 48, 32);
-const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf2f1ee, roughness: 0.38, metalness: 0 });
-const accentMat = new THREE.MeshStandardMaterial({ color: 0x9b8cff, roughness: 0.32, metalness: 0, emissive: 0x2a1f66, emissiveIntensity: 0.35 });
+const sphereGeo = new THREE.SphereGeometry(1, 12, 8);
+const whiteMat = new THREE.MeshLambertMaterial({ color: 0xd9d8d4 });
+const accentMat = new THREE.MeshLambertMaterial({ color: 0x8f80ff, emissive: 0x2a1f66, emissiveIntensity: 0.35 });
 
 function resize() {
   const w = window.innerWidth;
@@ -229,7 +216,6 @@ function spawnFlick(map, highlight) {
   const mesh = new THREE.Mesh(sphereGeo, highlight ? accentMat : whiteMat);
   mesh.scale.setScalar(r);
   mesh.position.copy(pos);
-  mesh.castShadow = true;
   mesh.userData = { sizeKey, radiusDeg, born: performance.now() };
   scene.add(mesh);
   return mesh;
@@ -241,7 +227,6 @@ function spawnTracker(map) {
   const r = distance * Math.tan(radiusDeg * DEG);
   const mesh = new THREE.Mesh(sphereGeo, accentMat.clone());
   mesh.scale.setScalar(r);
-  mesh.castShadow = true;
   mesh.userData = { sizeKey, radiusDeg, ty: 0, tp: 4, vy: 0, vp: 0, next: 0, distance, speedKey: "slow", axisKey: "h" };
   scene.add(mesh);
   retarget(mesh, map);
@@ -390,8 +375,17 @@ document.addEventListener("mousedown", (e) => {
   run.lastShot = now;
 });
 
+let fpsFrames = 0;
+let fpsSince = performance.now();
+
 function frame() {
   const now = performance.now();
+  fpsFrames++;
+  if (now - fpsSince >= 500) {
+    $("hint").textContent = `${Math.round((fpsFrames * 1000) / (now - fpsSince))} fps  ·  esc pause`;
+    fpsFrames = 0;
+    fpsSince = now;
+  }
   if (run && run.started && !run.paused && !run.done) {
     const dt = Math.min(0.05, (now - run.last) / 1000);
     run.last = now;

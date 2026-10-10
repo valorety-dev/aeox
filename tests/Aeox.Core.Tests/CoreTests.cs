@@ -29,7 +29,7 @@ public sealed class CoreTests : IDisposable
             "sg.ResolutionQuality=100.000000",
             "sg.ShadowQuality=3"
         });
-        _ctx = new AeoxContext(game, new HardwareInfo("AMD Ryzen 9 7900X3D", new[] { "NVIDIA GeForce RTX 4080 SUPER" }), Path.Combine(_root, "data"), "C:\\fake\\FortniteClient-Win64-Shipping.exe");
+        _ctx = new AeoxContext(game, new HardwareInfo("AMD Ryzen 7 7800X3D", new[] { "NVIDIA GeForce RTX 4070" }), Path.Combine(_root, "data"), "C:\\fake\\FortniteClient-Win64-Shipping.exe");
     }
 
     public void Dispose()

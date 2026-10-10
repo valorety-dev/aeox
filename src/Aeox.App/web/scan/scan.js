@@ -346,20 +346,4 @@ if (host) {
     if (msg && msg.type === "card") host.postMessage({ type: "card", data: makeCard() });
   });
   host.postMessage({ type: "ready" });
-} else {
-  render({
-    verdict: "your gpu sets the pace at 4.6 ms per frame. lower render scale or resolution for more fps.",
-    matchesUsed: 10,
-    avgFps: 246,
-    bottleneck: "gpu",
-    parts: [
-      { kind: "cpu", title: "amd ryzen 9 7900x3d 12-core", detail: "12 cores / 24 threads · 4.4 ghz · 3d v-cache", status: "ok", note: "3.9 ms per frame (game 3.6, render 3.9)" },
-      { kind: "gpu", title: "geforce rtx 4080 super", detail: "16 gb vram", status: "limit", note: "4.6 ms per frame" },
-      { kind: "ram", title: "64 gb", detail: "4 sticks · 6000 mt/s", status: "ok", note: "running at rated speed" },
-      { kind: "ssd", title: "samsung ssd 990 pro", detail: "nvme ssd", status: "ok", note: "fast enough for streaming assets" },
-      { kind: "monitor", title: "1920×1080", detail: "239 hz", status: "ok", note: "246 fps average vs 239 hz" },
-      { kind: "network", title: "wi-fi", detail: "144 mbps", status: "warn", note: "4.1 ms jitter in your matches" }
-    ]
-  });
-  window.aeoxCard = makeCard;
 }

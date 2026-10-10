@@ -23,7 +23,7 @@ const PRESETS = [
   { id: "gridshot", name: "gridshot", note: "three targets on a 5x5 grid. click them as fast as you can", kind: "flick", mode: "grid", count: 3, duration: 60 },
   { id: "sixshot", name: "sixshot", note: "six small targets spread over the wall. clear them clean", kind: "flick", mode: "six", count: 6, duration: 60 },
   { id: "spidershot", name: "spidershot", note: "center, flick out, back to center. every direction", kind: "flick", mode: "spider", count: 1, duration: 60 },
-  { id: "precision", name: "precision", note: "every target starts big and shrinks. the smaller you hit it, the more points", kind: "flick", mode: "precision", count: 1, duration: 60 },
+  { id: "precision", name: "precision", note: "small targets that keep shrinking. the smaller you hit them, the more points", kind: "flick", mode: "precision", count: 1, duration: 60 },
   { id: "microshot", name: "microshot", note: "tiny targets just next to your crosshair. small, exact corrections", kind: "flick", mode: "micro", count: 1, duration: 60 },
   { id: "reflexshot", name: "reflexshot", note: "a target flashes up somewhere. hit it before it is gone", kind: "flick", mode: "reflex", count: 1, duration: 60 },
   { id: "multishot", name: "multishot", note: "three targets, three hits each. finish one, switch to the next", kind: "flick", mode: "multi", count: 3, duration: 60 },
@@ -424,8 +424,8 @@ function spawn(map) {
     case "micro": return spawnMicro();
     case "reflex": return spawnReflex();
     case "precision": {
-      const m = spawnFree(3, 18, 0, 14);
-      Object.assign(m.userData, { from: 3, to: 0.35, life: 2200 });
+      const m = spawnFree(1.1, 18, 0, 14);
+      Object.assign(m.userData, { from: 1.1, to: 0.25, life: 1800 });
       return m;
     }
     case "multi": {
@@ -708,6 +708,7 @@ document.addEventListener("mouseup", (e) => { if (e.button === 0) firing = false
 
 let fpsFrames = 0;
 let fpsSince = performance.now();
+let hudAt = 0;
 
 function frame() {
   const now = performance.now();
@@ -754,8 +755,11 @@ function frame() {
       }
     }
     const left = Math.max(0, run.ends - now);
-    $("timer").textContent = clock(left);
-    $("acc").textContent = accuracyText();
+    if (now - hudAt >= 100) {
+      hudAt = now;
+      $("timer").textContent = clock(left);
+      $("acc").textContent = accuracyText();
+    }
     if (left <= 0) finish();
   } else {
     camera.rotation.set(pitch, yaw, 0);

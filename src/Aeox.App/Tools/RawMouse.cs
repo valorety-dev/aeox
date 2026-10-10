@@ -55,7 +55,7 @@ public sealed class RawMouse : IDisposable
         if ((mouse.Flags & 0x01) != 0) return IntPtr.Zero;
         _dx += mouse.LastX;
         _dy += mouse.LastY;
-        if (_clock.ElapsedTicks - _lastFlush >= Stopwatch.Frequency / 2000) Flush();
+        if (_clock.ElapsedTicks - _lastFlush >= Stopwatch.Frequency / 1000) Flush();
         return IntPtr.Zero;
     }
 

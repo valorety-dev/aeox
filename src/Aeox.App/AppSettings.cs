@@ -17,6 +17,8 @@ public sealed class AppSettings
     public bool AutoReapply { get; set; } = true;
     public bool SessionReports { get; set; } = true;
     public List<string> ActiveIds { get; set; } = new();
+    public bool CloseAppsOnGameStart { get; set; }
+    public List<string>? CloseApps { get; set; }
 
     private static string FilePath => Path.Combine(AeoxContext.DefaultDataDir(), "settings.json");
 

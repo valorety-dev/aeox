@@ -22,6 +22,9 @@ public sealed class AutoMode : IDisposable
     private DateTime _lastDriftCheck = DateTime.MinValue;
     private bool _trayHintShown;
     private bool _noted;
+    private bool _anyWasRunning;
+    private bool _liveChecked;
+    private DateTime _anyStartUtc;
 
     public AutoMode(Window window, MainViewModel vm)
     {
@@ -86,6 +89,7 @@ public sealed class AutoMode : IDisposable
             _vm.NoteRunningGame();
         }
         if (!running) _noted = false;
+        WatchAnyGame();
         if (!running && _gameWasRunning) _ = OnGameClosedAsync(_sessionStartUtc);
         _gameWasRunning = running;
 
@@ -95,6 +99,37 @@ public sealed class AutoMode : IDisposable
         var fixedCount = _vm.ReapplyRemembered();
         if (fixedCount > 0)
             Notify("Settings restored", $"Something reset {fixedCount} of your settings. Aeox put them back.");
+    }
+
+    private void WatchAnyGame()
+    {
+        var game = Aeox.Core.Live.GameMonitor.FindRunning(_vm.AllGames);
+        var any = game is not null;
+        if (any && !_anyWasRunning)
+        {
+            _anyStartUtc = DateTime.UtcNow;
+            _liveChecked = false;
+            if (_vm.Settings.CloseAppsOnGameStart && !_pauseItem.Checked) _ = CloseAppsAsync(game!.Game.ShortName);
+        }
+        if (any && !_liveChecked && !_pauseItem.Checked && (DateTime.UtcNow - _anyStartUtc).TotalSeconds > 60)
+        {
+            _liveChecked = true;
+            _ = LiveCheckAsync();
+        }
+        _anyWasRunning = any;
+    }
+
+    private async Task CloseAppsAsync(string gameName)
+    {
+        var closed = await Aeox.Core.Live.BackgroundApps.CloseAsync(BackgroundViewModel.Chosen(_vm.Settings));
+        if (closed > 0) Notify("Background apps closed", $"Closed {closed} background process{(closed == 1 ? "" : "es")} for {gameName}.");
+    }
+
+    private async Task LiveCheckAsync()
+    {
+        var report = await _vm.Live.CheckAsync();
+        var warn = report?.Findings.FirstOrDefault(f => f.Status == Aeox.Core.Checkup.CheckStatus.Warn);
+        if (report is not null && warn is not null) Notify($"{report.GameName}: {warn.Title}", warn.Detail.Length > 200 ? warn.Detail[..200] + "..." : warn.Detail);
     }
 
     private async Task OnGameClosedAsync(DateTime sessionStartUtc)

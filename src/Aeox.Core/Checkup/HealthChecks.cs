@@ -132,7 +132,7 @@ public static class HealthChecks
         var found = HeavyBackgroundApps.Where(a => running.Contains(a.Process)).Select(a => a.Name).Distinct().ToList();
         return found.Count == 0
             ? new CheckResult("Background apps", CheckStatus.Good, "No known FPS-heavy apps running.")
-            : new CheckResult("Background apps", CheckStatus.Warn, $"{string.Join(", ", found)} running. Close them while playing, they poll hardware and cost frame time.");
+            : new CheckResult("Background apps", CheckStatus.Warn, $"{string.Join(", ", found)} running. Close them while playing, they poll hardware and cost frame time.", "Background");
     }
 
     private static CheckResult? Connection()

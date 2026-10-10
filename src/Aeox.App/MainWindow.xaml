@@ -124,8 +124,9 @@
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="03" Content="{Binding CurrentGameLabel}" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Game}" CommandParameter="Game" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="04" Content="windows" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=System}" CommandParameter="System" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="05" Content="network" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Network}" CommandParameter="Network" />
-                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="06" Content="stats" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Stats}" CommandParameter="Stats" Visibility="{Binding StatsAvailable, Converter={StaticResource BoolToVis}}" />
-                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="07" Content="settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="06" Content="background" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Background}" CommandParameter="Background" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="07" Content="stats" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Stats}" CommandParameter="Stats" Visibility="{Binding StatsAvailable, Converter={StaticResource BoolToVis}}" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="08" Content="settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
                 </StackPanel>
 
                 <Border Grid.Row="4" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="24,14">
@@ -207,6 +208,52 @@
                 </StackPanel>
             </ScrollViewer>
 
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsBackgroundPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel DataContext="{Binding Background}">
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock><Run Text="06" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="background" FontWeight="Bold" /></TextBlock>
+                            <TextBlock Text="{Binding Summary}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Margin="36,18,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:BackgroundRow}">
+                                    <Border Style="{StaticResource Row}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Margin="0,0,24,0">
+                                                <TextBlock Text="{Binding Name}" />
+                                                <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <Button Style="{StaticResource PrimaryButton}" Content="close selected" Command="{Binding CloseCommand}" />
+                            <Button Style="{StaticResource GhostButton}" Content="refresh" Command="{Binding RefreshCommand}" Margin="10,0,0,0" />
+                        </StackPanel>
+                        <Border Style="{StaticResource Row}" Margin="0,18,0,0" BorderThickness="0,1,0,1">
+                            <DockPanel>
+                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding AutoClose, Mode=TwoWay}" AutomationProperties.Name="Close when a game starts" />
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="close them when a game starts" />
+                                    <TextBlock Text="aeox closes the selected apps once a supported game is running." FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <TextBlock Text="only known non-essential apps are listed. game launchers, anti-cheat, drivers and windows itself are never touched." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,16,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
             <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsCheckupPage, Converter={StaticResource BoolToVis}}">
                 <StackPanel DataContext="{Binding Checkup}">
                     <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
@@ -231,7 +278,33 @@
                             <TextBlock Grid.Column="1" Text="turns on what fits this hardware. nothing is written until you hit apply." FontSize="12" Foreground="{StaticResource FaintBrush}" VerticalAlignment="Center" Margin="14,0,0,0" TextWrapping="Wrap" />
                         </Grid>
                     </StackPanel>
-                    <StackPanel Margin="36,22,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                    <StackPanel Margin="36,26,36,0" MaxWidth="680" HorizontalAlignment="Left" DataContext="{Binding DataContext.Live, ElementName=Root}">
+                        <TextBlock Text="while you play" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding Summary}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <ItemsControl ItemsSource="{Binding Rows}" Focusable="False" Margin="0,6,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:LiveRow}">
+                                    <Border Style="{StaticResource Row}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="58" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Tag}" Foreground="{Binding DotBrush}" FontWeight="Bold" />
+                                            <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                                <TextBlock Text="{Binding Title}" />
+                                                <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Style="{StaticResource GhostButton}" Height="26" Padding="10,0" FontSize="12" Content="{Binding FixText}" Command="{Binding FixCommand}" VerticalAlignment="Center" Visibility="{Binding HasFix, Converter={StaticResource BoolToVis}}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Style="{StaticResource GhostButton}" Content="{Binding ButtonText}" Command="{Binding CheckCommand}" HorizontalAlignment="Left" Margin="0,12,0,0" />
+                    </StackPanel>
+                    <StackPanel Margin="36,26,36,0" MaxWidth="680" HorizontalAlignment="Left">
                         <TextBlock Text="checks" Style="{StaticResource SectionLabel}" />
                         <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
                             <ItemsControl.ItemTemplate>
@@ -263,7 +336,7 @@
                 <StackPanel DataContext="{Binding Stats}">
                     <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
                         <StackPanel>
-                            <TextBlock><Run Text="06" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="stats" FontWeight="Bold" /></TextBlock>
+                            <TextBlock><Run Text="07" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="stats" FontWeight="Bold" /></TextBlock>
                             <TextBlock Text="{Binding Headline}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
@@ -351,7 +424,7 @@
                 <StackPanel>
                     <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
                         <StackPanel>
-                            <TextBlock><Run Text="07" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="settings" FontWeight="Bold" /></TextBlock>
+                            <TextBlock><Run Text="08" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="settings" FontWeight="Bold" /></TextBlock>
                             <TextBlock Text="hardware, locations, auto mode and undo." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
                         </StackPanel>
                     </Border>

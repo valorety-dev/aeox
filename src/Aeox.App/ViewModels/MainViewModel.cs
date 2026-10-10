@@ -48,6 +48,8 @@ public sealed class MainViewModel : Observable
         FindGamesCommand = new RelayCommand(() => _ = FindGamesAsync(), () => !_scanning);
         _ = FindGamesAsync();
         Checkup = new CheckupViewModel(() => Ctx, p => Page = p);
+        Live = new LiveViewModel(() => _games, _hardware, p => Page = p);
+        Background = new BackgroundViewModel(Settings);
         Stats = new StatsViewModel(() => Ctx);
         _ = Checkup.RunAsync();
 
@@ -65,6 +67,9 @@ public sealed class MainViewModel : Observable
     public NetworkViewModel Network { get; private set; }
     public PageViewModel NetworkTweaks { get; private set; }
     public CheckupViewModel Checkup { get; }
+    public LiveViewModel Live { get; }
+    public BackgroundViewModel Background { get; }
+    public IReadOnlyList<GameProfile> AllGames => _games;
     public StatsViewModel Stats { get; }
 
     public ObservableCollection<GameChoice> Games { get; } = new();
@@ -313,6 +318,8 @@ public sealed class MainViewModel : Observable
             Raise(nameof(IsCheckupPage));
             Raise(nameof(IsStatsPage));
             Raise(nameof(IsGamesPage));
+            Raise(nameof(IsBackgroundPage));
+            if (value == "Background") Background.Refresh();
             if (value == "Stats") _ = Stats.LoadAsync();
             if (value == "Checkup" && Checkup is { HasRun: true }) _ = Checkup.RunAsync();
         }
@@ -321,6 +328,7 @@ public sealed class MainViewModel : Observable
     public PageViewModel? CurrentPage => Pages.FirstOrDefault(p => p.Key == Page);
     public bool IsTweakPage => CurrentPage is not null;
     public bool IsGamesPage => Page == "Games";
+    public bool IsBackgroundPage => Page == "Background";
     public bool StatsAvailable => Ctx.Game.IsFortnite;
 
     private IEnumerable<Tweak> GameTweaks => Ctx.Game.Tweaks?.Invoke(Ctx) ?? Array.Empty<Tweak>();

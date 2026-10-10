@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Aeox.App.Tools;
 using Aeox.App.ViewModels;
 
 namespace Aeox.App;
@@ -10,12 +11,14 @@ namespace Aeox.App;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
+    private readonly ScanHost _scan;
 
     public MainWindow()
     {
         InitializeComponent();
         _vm = new MainViewModel();
         DataContext = _vm;
+        _scan = new ScanHost(ScanView, text => ScanStatus.Text = text);
         _vm.PropertyChanged += OnViewModelChanged;
         ApplyStatusVisual();
         SourceInitialized += (_, _) => ApplyWindowFrame();
@@ -55,6 +58,12 @@ public partial class MainWindow : Window
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainViewModel.Status)) ApplyStatusVisual();
+        if (e.PropertyName == nameof(MainViewModel.ShowPreview))
+        {
+            PreviewColumn.Width = new GridLength(_vm.ShowPreview ? 400 : 0);
+            PreviewPanel.Visibility = _vm.ShowPreview ? Visibility.Visible : Visibility.Collapsed;
+        }
+        if (e.PropertyName == nameof(MainViewModel.IsScanPage) && _vm.IsScanPage) _ = _scan.StartAsync();
     }
 
     private void ApplyStatusVisual()
@@ -77,6 +86,15 @@ public partial class MainWindow : Window
         MaxButton.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
         MaxButton.ToolTip = WindowState == WindowState.Maximized ? "Restore" : "Maximize";
     }
+
+    private void DriverTab_Checked(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.RadioButton { Tag: string page }) _vm.Driver.Page = page;
+    }
+
+    private async void Rescan_Click(object sender, RoutedEventArgs e) => await _scan.RescanAsync();
+
+    private void ScanCard_Click(object sender, RoutedEventArgs e) => _scan.SaveCard();
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 

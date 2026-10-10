@@ -70,6 +70,58 @@ public sealed class MainViewModel : Observable
     public LiveViewModel Live { get; }
     public BackgroundViewModel Background { get; }
     public IReadOnlyList<GameProfile> AllGames => _games;
+    public Aeox.App.Tools.DriverViewModel Driver { get; } = new();
+    public ICommand OpenAimCommand => _openAim ??= new RelayCommand(OpenAim);
+    private ICommand? _openAim;
+    private bool _driverLoaded;
+    private Aeox.App.Tools.AimWindow? _aimWindow;
+    private string _aimSens = "looking for your games...";
+    private string _aimRuns = "no runs yet.";
+
+    public string AimSens
+    {
+        get => _aimSens;
+        private set => Set(ref _aimSens, value);
+    }
+
+    public string AimRuns
+    {
+        get => _aimRuns;
+        private set => Set(ref _aimRuns, value);
+    }
+
+    public void OpenAim()
+    {
+        if (_aimWindow is { IsLoaded: true })
+        {
+            if (_aimWindow.WindowState == WindowState.Minimized) _aimWindow.WindowState = WindowState.Normal;
+            _aimWindow.Activate();
+            return;
+        }
+        _aimWindow = new Aeox.App.Tools.AimWindow();
+        _aimWindow.Closed += (_, _) => { _aimWindow = null; _ = LoadAimAsync(); };
+        _aimWindow.Show();
+    }
+
+    private async Task LoadAimAsync()
+    {
+        var found = await Task.Run(Aeox.Core.Aim.AimImport.FindAll);
+        AimSens = found.Count == 0
+            ? "none of valorant, cs2, apex or call of duty saved a sensitivity here. type yours in the trainer."
+            : string.Join(Environment.NewLine, found.Select(f => $"{f.Game}  ·  {f.Sens:0.###}  ·  from {f.Source}"));
+        try
+        {
+            var path = Aeox.App.Tools.AimWindow.ProfilePath;
+            if (!System.IO.File.Exists(path)) return;
+            using var doc = System.Text.Json.JsonDocument.Parse(await System.IO.File.ReadAllTextAsync(path));
+            if (!doc.RootElement.TryGetProperty("runs", out var runs) || runs.GetArrayLength() == 0) return;
+            AimRuns = string.Join(Environment.NewLine, runs.EnumerateArray().Take(6).Select(r =>
+                $"{r.GetProperty("map").GetString()}  ·  {r.GetProperty("score").GetInt32():N0}  ·  {r.GetProperty("acc").GetDouble():0.#}%"));
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or System.Text.Json.JsonException or InvalidOperationException or KeyNotFoundException)
+        {
+        }
+    }
     public StatsViewModel Stats { get; }
 
     public ObservableCollection<GameChoice> Games { get; } = new();
@@ -319,6 +371,12 @@ public sealed class MainViewModel : Observable
             Raise(nameof(IsStatsPage));
             Raise(nameof(IsGamesPage));
             Raise(nameof(IsBackgroundPage));
+            Raise(nameof(IsDriverPage));
+            Raise(nameof(IsScanPage));
+            Raise(nameof(IsAimPage));
+            Raise(nameof(ShowPreview));
+            if (value == "Driver" && !_driverLoaded) { _driverLoaded = true; _ = Driver.LoadAsync(); }
+            if (value == "Aim") _ = LoadAimAsync();
             if (value == "Background") Background.Refresh();
             if (value == "Stats") _ = Stats.LoadAsync();
             if (value == "Checkup" && Checkup is { HasRun: true }) _ = Checkup.RunAsync();
@@ -329,6 +387,10 @@ public sealed class MainViewModel : Observable
     public bool IsTweakPage => CurrentPage is not null;
     public bool IsGamesPage => Page == "Games";
     public bool IsBackgroundPage => Page == "Background";
+    public bool IsDriverPage => Page == "Driver";
+    public bool IsScanPage => Page == "Scan";
+    public bool IsAimPage => Page == "Aim";
+    public bool ShowPreview => Page is not ("Driver" or "Scan" or "Aim");
     public bool StatsAvailable => Ctx.Game.IsFortnite;
 
     private IEnumerable<Tweak> GameTweaks => Ctx.Game.Tweaks?.Invoke(Ctx) ?? Array.Empty<Tweak>();

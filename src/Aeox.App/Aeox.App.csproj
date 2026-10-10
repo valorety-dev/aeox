@@ -5,6 +5,10 @@
     <ProjectReference Include="..\Aeox.UI\Aeox.UI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -20,8 +24,9 @@
     <Authors>Valorety</Authors>
     <Company>Valorety</Company>
     <Copyright>Valorety</Copyright>
-    <Description>FPS tweaker for Fortnite and Retrac</Description>
+    <Description>FPS tweaker, driver check, pc scan and aim trainer</Description>
     <ApplicationIcon>Assets\aeox.ico</ApplicationIcon>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +38,7 @@
   <ItemGroup>
     <Resource Include="Assets\logo.png" />
     <Resource Include="Assets\aeox.ico" />
+    <None Include="web\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

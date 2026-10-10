@@ -4,6 +4,8 @@
         xmlns:vm="clr-namespace:Aeox.App.ViewModels"
         xmlns:controls="clr-namespace:Aeox.App.Controls"
         xmlns:ui="clr-namespace:Aeox.UI.Controls;assembly=Aeox.UI"
+        xmlns:tools="clr-namespace:Aeox.App.Tools"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="Aeox"
         Icon="Assets/aeox.ico"
         Width="1180" Height="740" MinWidth="980" MinHeight="600"
@@ -93,7 +95,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220" />
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="400" />
+            <ColumnDefinition x:Name="PreviewColumn" Width="400" />
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
@@ -119,6 +121,7 @@
                 </Border>
 
                 <StackPanel Grid.Row="2" Margin="12,0">
+                    <TextBlock Text="tweaks" Style="{StaticResource SectionLabel}" Margin="12,0,0,6" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="01" Content="home" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Checkup}" CommandParameter="Checkup" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="02" Content="games" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Games}" CommandParameter="Games" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="03" Content="{Binding CurrentGameLabel}" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Game}" CommandParameter="Game" />
@@ -126,7 +129,11 @@
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="05" Content="network" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Network}" CommandParameter="Network" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="06" Content="background" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Background}" CommandParameter="Background" />
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="07" Content="stats" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Stats}" CommandParameter="Stats" Visibility="{Binding StatsAvailable, Converter={StaticResource BoolToVis}}" />
-                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="08" Content="settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" />
+                    <TextBlock Text="tools" Style="{StaticResource SectionLabel}" Margin="12,16,0,6" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="08" Content="driver" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Driver}" CommandParameter="Driver" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="09" Content="scan" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Scan}" CommandParameter="Scan" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="10" Content="aim" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Aim}" CommandParameter="Aim" />
+                    <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="11" Content="settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" Margin="0,16,0,0" />
                 </StackPanel>
 
                 <Border Grid.Row="4" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="24,14">
@@ -153,6 +160,160 @@
                         </StackPanel>
                     </Border>
                     <ItemsControl ItemsSource="{Binding Items}" Focusable="False" Margin="36,4,36,0" MaxWidth="680" HorizontalAlignment="Left" />
+                </StackPanel>
+            </ScrollViewer>
+
+
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsDriverPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel DataContext="{Binding Driver}">
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock><Run Text="08" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="driver" FontWeight="Bold" /></TextBlock>
+                            <TextBlock Text="{Binding GpuName}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
+                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                <RadioButton Style="{StaticResource Pill}" GroupName="DriverTab" Content="overview" IsChecked="{Binding IsOverview, Mode=OneWay}" Checked="DriverTab_Checked" Tag="Overview" />
+                                <RadioButton Style="{StaticResource Pill}" GroupName="DriverTab" Content="history" IsChecked="{Binding IsHistory, Mode=OneWay}" Checked="DriverTab_Checked" Tag="History" />
+                                <RadioButton Style="{StaticResource Pill}" GroupName="DriverTab" Content="releases" IsChecked="{Binding IsReleases, Mode=OneWay}" Checked="DriverTab_Checked" Tag="Releases" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Margin="36,28,36,0" MaxWidth="720" HorizontalAlignment="Left" Visibility="{Binding IsOverview, Converter={StaticResource BoolToVis}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="installed" Style="{StaticResource SectionLabel}" />
+                                <TextBlock Text="{Binding Installed}" FontFamily="{StaticResource BrandFont}" FontSize="30" Margin="0,8,0,0" />
+                                <TextBlock Text="{Binding InstalledNote}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="newest from nvidia" Style="{StaticResource SectionLabel}" />
+                                <TextBlock Text="{Binding Newest}" FontFamily="{StaticResource BrandFont}" FontSize="30" Margin="0,8,0,0" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock Text="{Binding NewestNote}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Grid>
+                        <Border BorderBrush="{StaticResource LineStrongBrush}" BorderThickness="1" Padding="20,18" Margin="0,32,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Verdict}" FontWeight="Bold" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding VerdictDetail}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                    <Button Style="{StaticResource PrimaryButton}" Content="{Binding PrimaryText}" Command="{Binding PrimaryCommand}" Visibility="{Binding HasPrimary, Converter={StaticResource BoolToVis}}" Margin="0,0,10,0" />
+                                    <Button Style="{StaticResource GhostButton}" Content="refresh" Command="{Binding RefreshCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,22,0,0" TextWrapping="Wrap"
+                                   Text="downloads open nvidia's official page. to roll back, run the installer, pick custom install, then tick clean install." />
+                    </StackPanel>
+
+                    <StackPanel Margin="36,20,36,0" MaxWidth="760" HorizontalAlignment="Left" Visibility="{Binding IsHistory, Converter={StaticResource BoolToVis}}">
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" /><ColumnDefinition Width="90" /><ColumnDefinition Width="90" /><ColumnDefinition Width="110" /><ColumnDefinition Width="90" /><ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="version" Style="{StaticResource SectionLabel}" />
+                            <TextBlock Grid.Column="1" Text="matches" Style="{StaticResource SectionLabel}" />
+                            <TextBlock Grid.Column="2" Text="avg fps" Style="{StaticResource SectionLabel}" />
+                            <TextBlock Grid.Column="3" Text="hitches/min" Style="{StaticResource SectionLabel}" />
+                            <TextBlock Grid.Column="4" Text="crashes" Style="{StaticResource SectionLabel}" />
+                            <TextBlock Grid.Column="5" Text="played" Style="{StaticResource SectionLabel}" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding History}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type tools:HistoryRow}">
+                                    <Border Style="{StaticResource Row}" Padding="0,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="110" /><ColumnDefinition Width="90" /><ColumnDefinition Width="90" /><ColumnDefinition Width="110" /><ColumnDefinition Width="90" /><ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="V" Text="{Binding Version}" Foreground="{StaticResource AccentBrush}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Matches}" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Fps}" />
+                                            <TextBlock Grid.Column="3" Text="{Binding Stutter}" Foreground="{StaticResource MutedBrush}" />
+                                            <TextBlock Grid.Column="4" Text="{Binding Crashes}" Foreground="{StaticResource MutedBrush}" />
+                                            <TextBlock Grid.Column="5" Text="{Binding Seen}" Foreground="{StaticResource MutedBrush}" />
+                                        </Grid>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                            <Setter TargetName="V" Property="FontWeight" Value="Bold" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,18,0,0" TextWrapping="Wrap"
+                                   Text="fortnite writes the driver version and fps into its logs. aeox keeps them, so this history grows with every session, even after the game deletes old logs." />
+                    </StackPanel>
+
+                    <StackPanel Margin="36,8,36,0" MaxWidth="760" HorizontalAlignment="Left" Visibility="{Binding IsReleases, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding ReleasesNote}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,12,0,4" />
+                        <ItemsControl ItemsSource="{Binding Releases}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type tools:ReleaseRow}">
+                                    <Border Style="{StaticResource Row}" Padding="0,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="90" /><ColumnDefinition Width="120" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Version}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Date}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,16,0">
+                                                <TextBlock Text="{Binding Tag}" Foreground="{StaticResource SuccessBrush}" FontSize="12" Visibility="{Binding HasTag, Converter={StaticResource BoolToVis}}" />
+                                                <TextBlock Text="{Binding Headline}" FontSize="12" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource GhostButton}" Height="26" Padding="10,0" FontSize="12" Content="notes" Command="{Binding NotesCommand}" Margin="0,0,6,0" />
+                                                <Button Style="{StaticResource GhostButton}" Height="26" Padding="10,0" FontSize="12" Content="download" Command="{Binding DownloadCommand}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Row="1" Visibility="{Binding IsScanPage, Converter={StaticResource BoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,18,36,16">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource GhostButton}" Content="save card" Click="ScanCard_Click" Margin="0,0,8,0" />
+                            <Button Style="{StaticResource PrimaryButton}" Content="rescan" Click="Rescan_Click" />
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock><Run Text="09" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="scan" FontWeight="Bold" /></TextBlock>
+                            <TextBlock x:Name="ScanStatus" Text="your pc in 3d. the part that holds you back lights up." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+                <wv2:WebView2 x:Name="ScanView" Grid.Row="1" DefaultBackgroundColor="#0B0B0C" />
+            </Grid>
+
+            <ScrollViewer Grid.Row="1" Style="{StaticResource PageScroll}" Visibility="{Binding IsAimPage, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
+                        <StackPanel>
+                            <TextBlock><Run Text="10" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="aim" FontWeight="Bold" /></TextBlock>
+                            <TextBlock Text="aim trainer with your real in game sensitivity. it finds your weak spots and builds maps for them." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Margin="36,26,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <TextBlock Text="sensitivity found on this pc" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding AimSens}" Margin="0,8,0,0" TextWrapping="Wrap" LineHeight="22" />
+                        <TextBlock Text="last runs" Style="{StaticResource SectionLabel}" Margin="0,26,0,0" />
+                        <TextBlock Text="{Binding AimRuns}" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" LineHeight="22" />
+                        <Button Style="{StaticResource PrimaryButton}" Content="open aim trainer" Command="{Binding OpenAimCommand}" HorizontalAlignment="Left" Margin="0,26,0,0" />
+                        <TextBlock Text="opens in its own window with raw mouse input and no fps cap. progress stays on this pc, no account needed." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,14,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
 
@@ -424,7 +585,7 @@
                 <StackPanel>
                     <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="36,30,36,22">
                         <StackPanel>
-                            <TextBlock><Run Text="08" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="settings" FontWeight="Bold" /></TextBlock>
+                            <TextBlock><Run Text="11" Foreground="{StaticResource FaintBrush}" /><Run Text="  " /><Run Text="settings" FontWeight="Bold" /></TextBlock>
                             <TextBlock Text="hardware, locations, auto mode and undo." FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
                         </StackPanel>
                     </Border>
@@ -488,7 +649,7 @@
             </ScrollViewer>
         </Grid>
 
-        <Border Grid.Column="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1,0,0,0">
+        <Border x:Name="PreviewPanel" Grid.Column="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1,0,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="52" />
@@ -501,11 +662,6 @@
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0,0,0">
                             <TextBlock Text="preview" FontWeight="Bold" />
                             <TextBlock Text="  ·  live" Foreground="{StaticResource FaintBrush}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
-                            <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Minimize" />
-                            <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="Maximize_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Maximize" />
-                            <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;" Click="Close_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Close" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -551,5 +707,11 @@
                 </Border>
             </Grid>
         </Border>
+
+        <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Panel.ZIndex="10">
+            <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="Minimize_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Minimize" />
+            <Button x:Name="MaxButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="Maximize_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Maximize" />
+            <Button Style="{StaticResource CloseCaptionButton}" Content="&#xE8BB;" Click="Close_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Close" />
+        </StackPanel>
     </Grid>
 </Window>

@@ -25,25 +25,45 @@ public static partial class AimImport
             {
             }
         }
-        Try(Valorant);
-        Try(Cs2);
+        try
+        {
+            list.AddRange(ValorantAccounts());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+        try
+        {
+            list.AddRange(Cs2Accounts());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
         Try(Apex);
         Try(Cod);
         return list;
     }
 
-    private static ImportedSens? Valorant()
+    private static IEnumerable<ImportedSens> ValorantAccounts()
     {
         var root = Path.Combine(Local, "VALORANT", "Saved", "Config");
-        if (!Directory.Exists(root)) return null;
-        var file = Directory.EnumerateFiles(root, "RiotUserSettings.ini", SearchOption.AllDirectories)
-            .OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault();
-        if (file is null) return null;
-        var sens = Find(File.ReadAllText(file), @"EAresFloatSettingName::MouseSensitivity=([\d.]+)");
-        return sens is null ? null : new ImportedSens("valorant", sens.Value, null, 103, "valorant settings");
+        if (!Directory.Exists(root)) yield break;
+        var seen = new HashSet<double>();
+        var files = Directory.EnumerateFiles(root, "RiotUserSettings.ini", SearchOption.AllDirectories)
+            .OrderByDescending(File.GetLastWriteTimeUtc).ToList();
+        var n = 0;
+        foreach (var file in files)
+        {
+            var sens = Find(File.ReadAllText(file), @"EAresFloatSettingName::MouseSensitivity=([\d.]+)");
+            if (sens is null) continue;
+            var rounded = Math.Round(sens.Value, 4);
+            n++;
+            if (!seen.Add(rounded)) continue;
+            yield return new ImportedSens("valorant", rounded, null, 103, $"valorant account {n}, played {File.GetLastWriteTime(file):MMM d}".ToLowerInvariant());
+        }
     }
 
-    private static ImportedSens? Cs2()
+    private static IEnumerable<ImportedSens> Cs2Accounts()
     {
         var files = OtherGames.SteamLibraries()
             .Select(l => Path.Combine(l, "userdata"))
@@ -53,14 +73,19 @@ public static partial class AimImport
             .Where(File.Exists)
             .OrderByDescending(File.GetLastWriteTimeUtc)
             .ToList();
-        if (files.Count == 0) return null;
-        var text = File.ReadAllText(files[0]);
-        var sens = Find(text, "\"sensitivity\"\\s+\"([\\d.]+)\"");
-        if (sens is null) return null;
-        var yaw = Find(text, "\"m_yaw\"\\s+\"([\\d.]+)\"");
-        return new ImportedSens("cs2", sens.Value, yaw, 106.26, "cs2 settings, newest steam account");
+        var seen = new HashSet<double>();
+        var n = 0;
+        foreach (var file in files)
+        {
+            var text = File.ReadAllText(file);
+            var sens = Find(text, "\"sensitivity\"\\s+\"([\\d.]+)\"");
+            if (sens is null) continue;
+            n++;
+            if (!seen.Add(Math.Round(sens.Value, 4))) continue;
+            var yaw = Find(text, "\"m_yaw\"\\s+\"([\\d.]+)\"");
+            yield return new ImportedSens("cs2", sens.Value, yaw, 106.26, $"cs2 steam account {n}, played {File.GetLastWriteTime(file):MMM d}".ToLowerInvariant());
+        }
     }
-
     private static ImportedSens? Apex()
     {
         var file = Path.Combine(Home, "Saved Games", "Respawn", "Apex", "local", "settings.cfg");

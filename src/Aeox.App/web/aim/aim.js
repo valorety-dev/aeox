@@ -44,8 +44,170 @@ const defaults = () => ({
   flick: {},
   track: {},
   runs: [],
-  maps: []
+  maps: [],
+  crosshair: null
 });
+
+const XDEFAULT = () => ({
+  color: "#ffffff", outline: true, outlineThickness: 1, outlineOpacity: 0.5,
+  dot: false, dotSize: 2, dotOpacity: 1,
+  inner: { show: true, length: 6, thickness: 2, gap: 3, opacity: 0.8 },
+  outer: { show: true, length: 2, thickness: 2, gap: 10, opacity: 0.35 }
+});
+
+const VAL_COLORS = ["#ffffff", "#00ff00", "#7fff00", "#dfff00", "#ffff00", "#00ffff", "#ff00ff", "#ff0000"];
+
+function xhair() {
+  profile.crosshair ??= XDEFAULT();
+  return profile.crosshair;
+}
+
+function drawCrosshair(ctx, cx, cy, scale, x) {
+  const px = (v) => Math.max(1, Math.round(v * scale));
+  const lines = [];
+  for (const part of [x.inner, x.outer]) {
+    if (!part.show || part.length <= 0) continue;
+    const len = px(part.length), th = px(part.thickness), gap = px(part.gap);
+    const half = Math.floor(th / 2);
+    lines.push({ a: part.opacity, rects: [
+      [cx + gap, cy - half, len, th], [cx - gap - len, cy - half, len, th],
+      [cx - half, cy + gap, th, len], [cx - half, cy - gap - len, th, len]
+    ] });
+  }
+  if (x.dot) {
+    const d = px(x.dotSize);
+    lines.push({ a: x.dotOpacity, rects: [[cx - Math.floor(d / 2), cy - Math.floor(d / 2), d, d]] });
+  }
+  for (const l of lines) {
+    if (x.outline) {
+      const o = px(x.outlineThickness);
+      ctx.globalAlpha = x.outlineOpacity * Math.max(l.a, 0.5);
+      ctx.fillStyle = "#000";
+      for (const [rx, ry, rw, rh] of l.rects) ctx.fillRect(rx - o, ry - o, rw + o * 2, rh + o * 2);
+    }
+    ctx.globalAlpha = l.a;
+    ctx.fillStyle = x.color;
+    for (const r of l.rects) ctx.fillRect(...r);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function paintCrosshair() {
+  const c = $("xhair");
+  if (c.width !== window.innerWidth || c.height !== window.innerHeight) { c.width = window.innerWidth; c.height = window.innerHeight; }
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, c.width, c.height);
+  drawCrosshair(ctx, Math.floor(c.width / 2), Math.floor(c.height / 2), c.height / 1080, xhair());
+  for (const id of ["xprevSmall", "xprevBig"]) {
+    const p = $(id);
+    const pc = p.getContext("2d");
+    pc.clearRect(0, 0, p.width, p.height);
+    drawCrosshair(pc, Math.floor(p.width / 2), Math.floor(p.height / 2), id === "xprevBig" ? 2 : 1.4, xhair());
+  }
+}
+
+function parseValorant(code) {
+  const t = code.trim().split(";").map((s) => s.trim()).filter((s) => s.length);
+  if (t.length < 1 || t[0] !== "0") return null;
+  const x = XDEFAULT();
+  let section = "P";
+  let custom = null;
+  for (let i = 1; i < t.length; i++) {
+    const k = t[i];
+    if (k === "P" || k === "A" || k === "S") { section = k; continue; }
+    const v = t[i + 1];
+    i++;
+    if (section !== "P" || v === undefined) continue;
+    const n = Number(v);
+    switch (k) {
+      case "c": if (n >= 0 && n < VAL_COLORS.length) x.color = VAL_COLORS[n]; break;
+      case "u": custom = "#" + v.slice(0, 6); break;
+      case "h": x.outline = n === 1; break;
+      case "t": x.outlineThickness = n; break;
+      case "o": x.outlineOpacity = n; break;
+      case "d": x.dot = n === 1; break;
+      case "z": x.dotSize = n; break;
+      case "a": x.dotOpacity = n; break;
+      case "0b": x.inner.show = n === 1; break;
+      case "0t": x.inner.thickness = n; break;
+      case "0l": x.inner.length = n; break;
+      case "0o": x.inner.gap = n; break;
+      case "0a": x.inner.opacity = n; break;
+      case "1b": x.outer.show = n === 1; break;
+      case "1t": x.outer.thickness = n; break;
+      case "1l": x.outer.length = n; break;
+      case "1o": x.outer.gap = n; break;
+      case "1a": x.outer.opacity = n; break;
+    }
+  }
+  if (custom && /^#[0-9a-fA-F]{6}$/.test(custom)) x.color = custom.toLowerCase();
+  return x;
+}
+
+function exportValorant(x) {
+  const d = XDEFAULT();
+  const out = ["0", "P"];
+  const add = (k, v, def) => { if (v !== def) out.push(k, String(v)); };
+  const idx = VAL_COLORS.indexOf(x.color.toLowerCase());
+  if (idx >= 0) add("c", idx, 0); else out.push("c", "8", "u", x.color.slice(1).toUpperCase() + "FF");
+  add("h", x.outline ? 1 : 0, 1);
+  add("t", x.outlineThickness, d.outlineThickness);
+  add("o", x.outlineOpacity, d.outlineOpacity);
+  add("d", x.dot ? 1 : 0, 0);
+  add("z", x.dotSize, d.dotSize);
+  add("a", x.dotOpacity, d.dotOpacity);
+  add("0b", x.inner.show ? 1 : 0, 1);
+  add("0t", x.inner.thickness, d.inner.thickness);
+  add("0l", x.inner.length, d.inner.length);
+  add("0o", x.inner.gap, d.inner.gap);
+  add("0a", x.inner.opacity, d.inner.opacity);
+  add("1b", x.outer.show ? 1 : 0, 1);
+  add("1t", x.outer.thickness, d.outer.thickness);
+  add("1l", x.outer.length, d.outer.length);
+  add("1o", x.outer.gap, d.outer.gap);
+  add("1a", x.outer.opacity, d.outer.opacity);
+  return out.join(";");
+}
+
+function openCrosshair() {
+  const x = xhair();
+  const f = [];
+  const slider = (path, label, min, max, step) => {
+    const v = path.split(".").reduce((o, k) => o[k], x);
+    f.push(`<label class="slider"><div><span>${label}</span><b id="xv-${path}">${v}</b></div><input type="range" min="${min}" max="${max}" step="${step}" value="${v}" data-x="${path}"></label>`);
+  };
+  const toggle = (path, label) => {
+    const v = path.split(".").reduce((o, k) => o[k], x);
+    f.push(`<label class="toggle"><span>${label}</span><input type="checkbox" data-xt="${path}" ${v ? "checked" : ""}></label>`);
+  };
+  f.push(`<p class="group">color</p>`);
+  f.push(`<div class="swatches" style="grid-column: 1 / -1">${VAL_COLORS.map((c) => `<button class="swatch${c === x.color ? " on" : ""}" style="background:${c}" data-c="${c}"></button>`).join("")}<input type="color" id="xcolor" value="${x.color}"></div>`);
+  f.push(`<p class="group">inner lines</p>`);
+  toggle("inner.show", "show"); slider("inner.opacity", "opacity", 0, 1, 0.05);
+  slider("inner.length", "length", 0, 20, 1); slider("inner.thickness", "thickness", 1, 10, 1);
+  slider("inner.gap", "gap", 0, 20, 1); f.push("<span></span>");
+  f.push(`<p class="group">outer lines</p>`);
+  toggle("outer.show", "show"); slider("outer.opacity", "opacity", 0, 1, 0.05);
+  slider("outer.length", "length", 0, 20, 1); slider("outer.thickness", "thickness", 1, 10, 1);
+  slider("outer.gap", "gap", 0, 40, 1); f.push("<span></span>");
+  f.push(`<p class="group">center dot and outline</p>`);
+  toggle("dot", "center dot"); slider("dotSize", "dot size", 1, 6, 1);
+  toggle("outline", "outline"); slider("outlineOpacity", "outline opacity", 0, 1, 0.05);
+  $("xFields").innerHTML = f.join("");
+  const set = (path, value) => { const keys = path.split("."); const last = keys.pop(); keys.reduce((o, k) => o[k], x)[last] = value; };
+  $("xFields").querySelectorAll("[data-x]").forEach((el) => el.addEventListener("input", () => {
+    set(el.dataset.x, Number(el.value)); $(`xv-${el.dataset.x}`).textContent = el.value; changed();
+  }));
+  $("xFields").querySelectorAll("[data-xt]").forEach((el) => el.addEventListener("change", () => { set(el.dataset.xt, el.checked); changed(); }));
+  $("xFields").querySelectorAll("[data-c]").forEach((el) => el.addEventListener("click", () => { x.color = el.dataset.c; openCrosshair(); changed(); }));
+  $("xcolor").addEventListener("input", () => { x.color = $("xcolor").value; changed(); });
+  $("xcode").value = "";
+  $("xnote").textContent = "";
+  function changed() { store(); paintCrosshair(); }
+  paintCrosshair();
+  show("xsheet");
+}
+
 
 let profile = defaults();
 let imports = [];
@@ -69,6 +231,10 @@ function degPerCount() {
   const g = GAMES[profile.game];
   const imp = imports.find((i) => i.game === profile.game && i.yaw);
   return profile.sens[profile.game] * (imp?.yaw ?? g.yaw);
+}
+
+function foundFor(game) {
+  return imports.filter((i) => i.game === game);
 }
 
 function hfov() {
@@ -160,7 +326,7 @@ function resize() {
   camera.fov = v / DEG;
   camera.updateProjectionMatrix();
 }
-window.addEventListener("resize", resize);
+window.addEventListener("resize", () => { resize(); paintCrosshair(); });
 
 function forward() {
   return new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, "YXZ"));
@@ -329,7 +495,14 @@ function lock() {
 
 document.addEventListener("pointerlockchange", () => {
   if (document.pointerLockElement === canvas) begin();
-  else if (run && run.started && !run.done) { run.paused = true; run.pausedAt = performance.now(); show("pause"); }
+  else if (run && run.started && !run.done) {
+    run.paused = true;
+    run.pausedAt = performance.now();
+    $("psens").value = tidy(profile.sens[profile.game]);
+    $("pdpi").value = tidy(profile.dpi);
+    $("psens").disabled = profile.game === "custom";
+    show("pause");
+  }
 });
 
 document.addEventListener("mousemove", (e) => {
@@ -614,14 +787,25 @@ function renderSettings() {
   const dpc = degPerCount();
   const cm = (360 / dpc / profile.dpi) * 2.54;
   $("readout").innerHTML = `${dpc.toFixed(5)}° per mouse count<br>${cm.toFixed(1)} cm per 360 at ${profile.dpi} dpi`;
-  const imp = imports.find((i) => i.game === profile.game);
-  $("source").textContent = imp
-    ? `read from your ${imp.source}. same feel as in game.`
+  const found = foundFor(profile.game);
+  $("found").innerHTML = found.length > 1 || (found.length === 1 && Number(found[0].sens) !== Number(profile.sens[profile.game]))
+    ? found.map((i, n) => `<button class="chip${Number(i.sens) === Number(profile.sens[profile.game]) ? " on" : ""}" data-n="${n}">${tidy(i.sens)}  ·  ${i.source}</button>`).join("")
+    : "";
+  $("found").querySelectorAll("[data-n]").forEach((b) => b.addEventListener("click", () => {
+    profile.sens[profile.game] = Number(found[Number(b.dataset.n)].sens);
+    store();
+    renderSettings();
+  }));
+  const imp = found.find((i) => Number(i.sens) === Number(profile.sens[profile.game]));
+  $("source").textContent = found.length > 1
+    ? "found more than one account on this pc. pick yours above or type it."
+    : imp ? `read from your ${imp.source}. same feel as in game.`
     : custom ? "type your cm/360 from any game. aeox matches it exactly."
     : profile.game === "fortnite" || profile.game === "overwatch"
       ? `${g.name} keeps sensitivity in your online account, so type it once. fov is horizontal on 16:9.`
       : "not found on this pc, type your in game value. fov is horizontal on 16:9.";
   resize();
+  paintCrosshair();
 }
 
 function setupSettings() {
@@ -672,6 +856,32 @@ function toMenu() {
 }
 
 $("gate").addEventListener("click", lock);
+$("editXhair").addEventListener("click", openCrosshair);
+$("pxhair").addEventListener("click", openCrosshair);
+$("xdone").addEventListener("click", () => { hide("xsheet"); renderSettings(); });
+$("xreset").addEventListener("click", () => { profile.crosshair = XDEFAULT(); store(); openCrosshair(); });
+$("ximport").addEventListener("click", () => {
+  const x = parseValorant($("xcode").value);
+  if (!x) { $("xnote").textContent = "that does not look like a valorant crosshair code. it starts with 0;"; return; }
+  profile.crosshair = x;
+  store();
+  openCrosshair();
+  $("xnote").textContent = "imported. this is your valorant crosshair.";
+});
+$("xexport").addEventListener("click", async () => {
+  const code = exportValorant(xhair());
+  $("xcode").value = code;
+  try { await navigator.clipboard.writeText(code); $("xnote").textContent = "copied. paste it in valorant under crosshair, import profile code."; }
+  catch { $("xnote").textContent = "select the code above and copy it."; }
+});
+const quick = (id, apply) => $(id).addEventListener("input", () => {
+  const v = Number($(id).value.replace(",", "."));
+  if (!Number.isFinite(v) || v <= 0) return;
+  apply(v);
+  store();
+});
+quick("psens", (v) => (profile.sens[profile.game] = v));
+quick("pdpi", (v) => (profile.dpi = v));
 $("resume").addEventListener("click", lock);
 $("restart").addEventListener("click", () => { const m = run.map; clearTargets(); hide("pause"); startRun(m); });
 $("quit").addEventListener("click", toMenu);
@@ -705,13 +915,10 @@ function init(data) {
   load(data?.profile);
   imports = data?.imports ?? [];
   for (const i of imports) {
-    if (!profile.imported?.includes(i.game)) {
-      profile.sens[i.game] = +i.sens;
-      if (i.hFov) profile.fov[i.game] = +i.hFov;
-      profile.imported = [...(profile.imported ?? []), i.game];
-    } else if (profile.sens[i.game] !== i.sens) {
-      profile.sens[i.game] = +i.sens;
-    }
+    if (profile.imported?.includes(i.game)) continue;
+    profile.sens[i.game] = +i.sens;
+    if (i.hFov) profile.fov[i.game] = +i.hFov;
+    profile.imported = [...(profile.imported ?? []), i.game];
   }
   if (!data?.profile && imports.length) profile.game = imports[0].game;
   store();

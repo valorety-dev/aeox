@@ -24,7 +24,7 @@
     </div>
   </header>
 
-  <div class="crosshair" id="crosshair"><i></i><i></i><i></i><i></i></div>
+  <canvas id="xhair"></canvas>
   <p class="corner left" id="mapLabel"></p>
   <p class="corner right" id="hint">esc pause</p>
 
@@ -39,6 +39,7 @@
         <span id="sensLabel">sensitivity</span>
         <input id="sens" type="text" inputmode="decimal" spellcheck="false">
       </div>
+      <div class="found" id="found"></div>
       <div class="field" id="cmRow">
         <span>cm / 360</span>
         <input id="cm360" type="text" inputmode="decimal" spellcheck="false">
@@ -53,6 +54,10 @@
       </div>
       <p class="readout" id="readout"></p>
       <p class="note" id="source"></p>
+      <p class="note">dpi only changes the cm/360 readout. the trainer reads raw mouse counts, exactly like your game, so your real dpi is always used.</p>
+      <p class="label gap">crosshair</p>
+      <canvas class="xprev" id="xprevSmall" width="252" height="110"></canvas>
+      <button id="editXhair">edit crosshair</button>
     </div>
 
     <div class="col wide">
@@ -85,6 +90,25 @@
     </div>
   </section>
 
+  <section class="sheet" id="xsheet" hidden>
+    <div class="sheet-body wide">
+      <p class="label">crosshair</p>
+      <canvas class="xprev big" id="xprevBig" width="660" height="220"></canvas>
+      <div class="grid2" id="xFields"></div>
+      <p class="group">valorant crosshair code</p>
+      <div class="coderow">
+        <input id="xcode" class="name" spellcheck="false" placeholder="paste a code like 0;P;c;5;h;0;0l;4;0o;2;0a;1;1b;0">
+        <button id="ximport">import</button>
+        <button id="xexport">copy my code</button>
+      </div>
+      <p class="note" id="xnote"></p>
+      <div class="row">
+        <button class="primary" id="xdone">done</button>
+        <button id="xreset">reset</button>
+      </div>
+    </div>
+  </section>
+
   <section class="sheet" id="gate" hidden>
     <div class="sheet-body center">
       <p class="big" id="gateTitle"></p>
@@ -95,6 +119,11 @@
   <section class="sheet" id="pause" hidden>
     <div class="sheet-body center">
       <p class="big">paused</p>
+      <div class="quick">
+        <label><span>sensitivity</span><input id="psens" type="text" inputmode="decimal" spellcheck="false"></label>
+        <label><span>dpi</span><input id="pdpi" type="text" inputmode="decimal" spellcheck="false"></label>
+        <button id="pxhair">crosshair</button>
+      </div>
       <div class="row">
         <button class="primary" id="resume">resume</button>
         <button id="restart">restart</button>

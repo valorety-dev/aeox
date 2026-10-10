@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 
 namespace Aeox.Core.Game;
@@ -35,47 +36,65 @@ public enum GameKind
 
 public sealed class GameProfile
 {
+    public const string RetracId = "Retrac";
+    public const string LiveId = "Fortnite";
+
     private readonly Func<string?> _findExe;
 
-    private GameProfile(GameKind kind, string name, string shortName, GamePaths paths, bool supportsEngineTweaks, bool hasPerformanceMode, Func<string?> findExe)
+    public GameProfile(string id, string shortName, string? version, bool isLive, GamePaths paths, Func<string?> findExe)
     {
-        Kind = kind;
-        Name = name;
+        Id = id;
         ShortName = shortName;
+        Version = version;
+        IsLive = isLive;
         Paths = paths;
-        SupportsEngineTweaks = supportsEngineTweaks;
-        HasPerformanceMode = hasPerformanceMode;
         _findExe = findExe;
     }
 
-    public GameKind Kind { get; }
-    public string Name { get; }
+    public string Id { get; }
     public string ShortName { get; }
+    public string? Version { get; }
+    public bool IsLive { get; }
     public GamePaths Paths { get; }
-    public bool SupportsEngineTweaks { get; }
-    public bool HasPerformanceMode { get; }
+
+    public double? VersionNumber =>
+        Version is not null && double.TryParse(Version, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+
+    public string? Season => IsLive ? null : GameCatalog.SeasonFor(VersionNumber);
+
+    public string Name => IsLive
+        ? "Fortnite  ·  Epic Games"
+        : $"{ShortName}  ·  Fortnite {Version ?? "unknown version"}" + (Season is null ? string.Empty : $"  ·  {Season}");
+
+    public string Label => IsLive ? "fortnite" : Version is null ? ShortName.ToLowerInvariant() : $"{ShortName.ToLowerInvariant()} {Version}";
+
+    public bool SupportsEngineTweaks => !IsLive && (VersionNumber is null || VersionNumber < 19);
+
+    public bool HasPerformanceMode => IsLive || VersionNumber >= 19;
+
+    public bool SupportsReflex => IsLive || VersionNumber is null || VersionNumber >= 14.1;
+
+    public string HistoryKey => GameCatalog.HistoryKey(Paths.SavedDir);
 
     public string? FindExe() => _findExe();
 
     public bool IsInstalled => Paths.ConfigExists || FindExe() is not null;
 
     public static GameProfile Retrac(string? savedDir = null) => new(
-        GameKind.Retrac, "Retrac  ·  Fortnite 14.60", "Retrac",
+        RetracId, "Retrac", "14.60", false,
         new GamePaths(savedDir ?? Path.Combine(LocalAppData, "RetracGame", "Saved")),
-        supportsEngineTweaks: true, hasPerformanceMode: false,
         FindRetracExe);
 
     public static GameProfile Fortnite(string? savedDir = null) => new(
-        GameKind.Fortnite, "Fortnite  ·  Epic Games", "Fortnite",
+        LiveId, "Fortnite", null, true,
         new GamePaths(savedDir ?? Path.Combine(LocalAppData, "FortniteGame", "Saved")),
-        supportsEngineTweaks: false, hasPerformanceMode: true,
         FindEpicFortniteExe);
 
     public static GameProfile For(GameKind kind) => kind == GameKind.Fortnite ? Fortnite() : Retrac();
 
-    private static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    internal static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-    private static string? FindRetracExe()
+    internal static string? FindRetracExe()
     {
         var root = Path.Combine(LocalAppData, "launcher.retrac.site");
         if (!Directory.Exists(root)) return null;
@@ -84,7 +103,7 @@ public sealed class GameProfile
             .FirstOrDefault(File.Exists);
     }
 
-    private static string? FindEpicFortniteExe()
+    internal static string? FindEpicFortniteExe()
     {
         var manifest = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "Epic", "UnrealEngineLauncher", "LauncherInstalled.dat");
@@ -104,6 +123,9 @@ public sealed class GameProfile
         {
         }
         catch (KeyNotFoundException)
+        {
+        }
+        catch (InvalidOperationException)
         {
         }
         return null;

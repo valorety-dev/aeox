@@ -205,11 +205,10 @@ public sealed class DriverViewModel : Observable
     {
         var matches = new List<MatchStat>();
         var sessions = new List<GameSession>();
-        foreach (var kind in new[] { GameKind.Retrac, GameKind.Fortnite })
+        foreach (var saved in GameCatalog.SavedDirs())
         {
-            var game = GameProfile.For(kind);
-            var history = MatchHistory.Load(AeoxContext.DefaultDataDir(), kind);
-            history.ImportLogs(game.Paths.LogDir);
+            var history = MatchHistory.Load(AeoxContext.DefaultDataDir(), GameCatalog.HistoryKey(saved));
+            history.ImportLogs(new GamePaths(saved).LogDir);
             matches.AddRange(history.Data.Matches);
             sessions.AddRange(history.Data.Sessions);
         }

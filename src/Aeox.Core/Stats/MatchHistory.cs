@@ -176,9 +176,9 @@ public sealed class MatchHistory
 
     public HistoryData Data { get; }
 
-    public static MatchHistory Load(string dataDir, GameKind game)
+    public static MatchHistory Load(string dataDir, string key)
     {
-        var path = Path.Combine(dataDir, $"history-{game.ToString().ToLowerInvariant()}.json");
+        var path = Path.Combine(dataDir, $"history-{key}.json");
         HistoryData data;
         try
         {

@@ -31,10 +31,10 @@ public static class SystemScan
     {
         var hw = HardwareInfo.Detect();
         var matches = new List<MatchStat>();
-        foreach (var kind in new[] { GameKind.Retrac, GameKind.Fortnite })
+        foreach (var saved in GameCatalog.SavedDirs())
         {
-            var history = MatchHistory.Load(dataDir, kind);
-            history.ImportLogs(GameProfile.For(kind).Paths.LogDir);
+            var history = MatchHistory.Load(dataDir, GameCatalog.HistoryKey(saved));
+            history.ImportLogs(new GamePaths(saved).LogDir);
             matches.AddRange(history.Data.Matches);
         }
         var recent = matches.OrderBy(m => m.TimeUtc).TakeLast(10)

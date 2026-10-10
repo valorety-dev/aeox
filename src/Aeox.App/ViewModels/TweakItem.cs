@@ -47,6 +47,7 @@ public sealed class TweakItem : Observable, ISettingItem
 
     public IEnumerable<(string Source, IReadOnlyList<Change> Changes, bool Enabled)> Desired()
     {
+        if (!IsOn && !_isApplied) yield break;
         yield return (Title, Changes, IsOn);
     }
 

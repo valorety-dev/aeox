@@ -28,6 +28,8 @@ public sealed class MainViewModel : Observable
     private string? _justRestored;
 
     private readonly HardwareInfo _hardware;
+    private IReadOnlyList<GameProfile> _games = Array.Empty<GameProfile>();
+    private bool _scanning;
 
     public MainViewModel()
     {
@@ -38,7 +40,13 @@ public sealed class MainViewModel : Observable
         Pages = Array.Empty<PageViewModel>();
         NetworkTweaks = null!;
         Network = null!;
-        BuildForGame(Settings.Game);
+        _games = GameCatalog.Discover(Settings.KnownGames);
+        var wanted = Settings.GameId ?? (Settings.Game == GameKind.Fortnite ? GameProfile.LiveId : GameProfile.RetracId);
+        BuildForGame(_games.FirstOrDefault(g => g.Id == wanted) ?? _games.FirstOrDefault(g => g.IsInstalled) ?? _games[0]);
+        RebuildGameChoices();
+        AddGameCommand = new RelayCommand(AddGame);
+        FindGamesCommand = new RelayCommand(() => _ = FindGamesAsync(), () => !_scanning);
+        _ = FindGamesAsync();
         Checkup = new CheckupViewModel(() => Ctx, p => Page = p);
         Stats = new StatsViewModel(() => Ctx);
         _ = Checkup.RunAsync();
@@ -59,35 +67,123 @@ public sealed class MainViewModel : Observable
     public CheckupViewModel Checkup { get; }
     public StatsViewModel Stats { get; }
 
-    public bool IsRetrac
-    {
-        get => Ctx.Game.Kind == GameKind.Retrac;
-        set { if (value) SelectGame(GameKind.Retrac); }
-    }
+    public ObservableCollection<GameChoice> Games { get; } = new();
+    public ICommand AddGameCommand { get; }
+    public ICommand FindGamesCommand { get; }
 
-    public bool IsFortnite
-    {
-        get => Ctx.Game.Kind == GameKind.Fortnite;
-        set { if (value) SelectGame(GameKind.Fortnite); }
-    }
+    public string FindGamesText => _scanning ? "searching..." : "find games";
 
     public string GameText => Ctx.Game.Name + (Ctx.GameExe is null ? "  ·  game files not found" : string.Empty);
 
-    private void SelectGame(GameKind kind)
+    public string GameDetail => (Ctx.GameExe ?? "Game files not found yet. Start the game once or use add game.") +
+                                Environment.NewLine + "Settings folder: " + Ctx.Paths.ConfigDir;
+
+    public string NameForSavedDir(string savedDir) =>
+        _games.FirstOrDefault(g => string.Equals(g.Paths.SavedDir, savedDir, StringComparison.OrdinalIgnoreCase) && g.FindExe() is not null)?.ShortName
+        ?? _games.FirstOrDefault(g => string.Equals(g.Paths.SavedDir, savedDir, StringComparison.OrdinalIgnoreCase))?.ShortName
+        ?? "Fortnite";
+
+    private void RebuildGameChoices()
     {
-        if (Ctx.Game.Kind == kind) return;
-        Settings.Game = kind;
+        Games.Clear();
+        foreach (var g in _games.Where(g => g.IsInstalled || g.Id == Ctx.Game.Id || g.Id == GameProfile.RetracId || g.Id == GameProfile.LiveId))
+            Games.Add(new GameChoice(g, g.Id == Ctx.Game.Id, SelectGame));
+    }
+
+    private void ReloadGames()
+    {
+        _games = GameCatalog.Discover(Settings.KnownGames);
+        var current = _games.FirstOrDefault(g => g.Id == Ctx.Game.Id);
+        if (current is not null && (current.Version != Ctx.Game.Version || current.Paths.SavedDir != Ctx.Paths.SavedDir)) BuildForGame(current);
+        RebuildGameChoices();
+    }
+
+    private bool Remember(string exe, string? savedDir)
+    {
+        var existing = Settings.KnownGames.FindIndex(k => string.Equals(k.Exe, exe, StringComparison.OrdinalIgnoreCase));
+        if (existing >= 0)
+        {
+            if (savedDir is null || Settings.KnownGames[existing].SavedDir == savedDir) return false;
+            Settings.KnownGames[existing] = Settings.KnownGames[existing] with { SavedDir = savedDir };
+            return true;
+        }
+        Settings.KnownGames.Add(new KnownGame(exe, savedDir));
+        return true;
+    }
+
+    private async Task FindGamesAsync()
+    {
+        if (_scanning) return;
+        _scanning = true;
+        Raise(nameof(FindGamesText));
+        CommandManager.InvalidateRequerySuggested();
+        try
+        {
+            var found = await Task.Run(() => GameCatalog.ScanForExes());
+            var changed = false;
+            foreach (var exe in found) changed |= Remember(exe, null);
+            if (changed) Settings.Save();
+            await Task.Run(() => GameCatalog.Discover(Settings.KnownGames));
+            ReloadGames();
+        }
+        finally
+        {
+            _scanning = false;
+            Raise(nameof(FindGamesText));
+            CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    public void NoteRunningGame()
+    {
+        var exe = GameCatalog.RunningExe();
+        if (exe is null) return;
+        var saved = GameCatalog.SavedDirWithFreshLog(TimeSpan.FromMinutes(2));
+        if (exe.Contains(@"launcher.retrac.site", StringComparison.OrdinalIgnoreCase) || string.Equals(exe, GameProfile.Fortnite().FindExe(), StringComparison.OrdinalIgnoreCase)) return;
+        if (!Remember(exe, saved)) return;
         Settings.Save();
-        BuildForGame(kind);
+        ReloadGames();
+    }
+
+    private void AddGame()
+    {
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "Pick the folder of the Fortnite build (the one with FortniteGame inside).",
+            UseDescriptionForTitle = true
+        };
+        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        var exes = GameCatalog.FindExesIn(dialog.SelectedPath);
+        if (exes.Count == 0)
+        {
+            MessageBox.Show("No Fortnite build found in that folder. Pick the folder that contains FortniteGame.", "Aeox", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        foreach (var exe in exes) Remember(exe, null);
+        Settings.Save();
+        ReloadGames();
+        var added = _games.FirstOrDefault(g => exes.Any(e => string.Equals(g.FindExe(), e, StringComparison.OrdinalIgnoreCase)));
+        if (added is not null) SelectGame(added);
+    }
+
+    private void SelectGame(GameProfile game)
+    {
+        if (Ctx.Game.Id == game.Id) return;
+        Settings.GameId = game.Id;
+        if (game.Id == GameProfile.RetracId) Settings.Game = GameKind.Retrac;
+        if (game.Id == GameProfile.LiveId) Settings.Game = GameKind.Fortnite;
+        Settings.Save();
+        BuildForGame(game);
+        foreach (var c in Games) c.SetSilently(c.Profile.Id == game.Id);
         if (Page == "Stats") _ = Stats.LoadAsync();
         _justApplied = 0;
         _justRestored = null;
         Refresh();
     }
 
-    private void BuildForGame(GameKind kind)
+    private void BuildForGame(GameProfile game)
     {
-        Ctx = new AeoxContext(GameProfile.For(kind), _hardware, AeoxContext.DefaultDataDir());
+        Ctx = new AeoxContext(game, _hardware, AeoxContext.DefaultDataDir());
         Pages = new[]
         {
             BuildPage(TweakCategory.Performance, "Performance", "03", "more fps, less delay."),
@@ -103,9 +199,8 @@ public sealed class MainViewModel : Observable
         Raise(nameof(PcHidden));
         Raise(nameof(Network));
         Raise(nameof(CurrentPage));
-        Raise(nameof(IsRetrac));
-        Raise(nameof(IsFortnite));
         Raise(nameof(GameText));
+        Raise(nameof(GameDetail));
         Raise(nameof(ConfigText));
     }
     public ObservableCollection<PreviewLine> Preview { get; } = new();
@@ -322,7 +417,7 @@ public sealed class MainViewModel : Observable
 
     private void RememberActive()
     {
-        var prefix = Ctx.Game.Kind + "|";
+        var prefix = Ctx.Game.Id + "|";
         Settings.ActiveIds.RemoveAll(i => i.StartsWith(prefix, StringComparison.Ordinal));
         foreach (var item in AllItems)
         {
@@ -335,7 +430,7 @@ public sealed class MainViewModel : Observable
     public int ReapplyRemembered()
     {
         if (RetracGame.IsGameRunning() || !Ctx.Paths.ConfigExists) return 0;
-        var prefix = Ctx.Game.Kind + "|";
+        var prefix = Ctx.Game.Id + "|";
         var desired = new List<(string, IReadOnlyList<Change>, bool)>();
         foreach (var id in Settings.ActiveIds.Where(i => i.StartsWith(prefix, StringComparison.Ordinal)))
         {
@@ -580,4 +675,37 @@ public sealed class ParamCommand : ICommand
     public bool CanExecute(object? parameter) => true;
 
     public void Execute(object? parameter) => _run(parameter as string);
+}
+
+public sealed class GameChoice : Observable
+{
+    private readonly Action<GameProfile> _select;
+    private bool _isSelected;
+
+    public GameChoice(GameProfile profile, bool selected, Action<GameProfile> select)
+    {
+        Profile = profile;
+        _isSelected = selected;
+        _select = select;
+    }
+
+    public GameProfile Profile { get; }
+    public string Label => Profile.Label;
+    public string Tip => Profile.Name;
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (!Set(ref _isSelected, value)) return;
+            if (value) _select(Profile);
+        }
+    }
+
+    public void SetSilently(bool value)
+    {
+        _isSelected = value;
+        Raise(nameof(IsSelected));
+    }
 }

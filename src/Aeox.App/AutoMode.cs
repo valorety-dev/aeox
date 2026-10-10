@@ -21,6 +21,7 @@ public sealed class AutoMode : IDisposable
     private DateTime _sessionStartUtc;
     private DateTime _lastDriftCheck = DateTime.MinValue;
     private bool _trayHintShown;
+    private bool _noted;
 
     public AutoMode(Window window, MainViewModel vm)
     {
@@ -79,6 +80,12 @@ public sealed class AutoMode : IDisposable
     {
         var running = GameRunning.IsGameRunning();
         if (running && !_gameWasRunning) _sessionStartUtc = DateTime.UtcNow;
+        if (running && (DateTime.UtcNow - _sessionStartUtc).TotalSeconds > 20 && !_noted)
+        {
+            _noted = true;
+            _vm.NoteRunningGame();
+        }
+        if (!running) _noted = false;
         if (!running && _gameWasRunning) _ = OnGameClosedAsync(_sessionStartUtc);
         _gameWasRunning = running;
 
@@ -94,30 +101,32 @@ public sealed class AutoMode : IDisposable
     {
         if (!_vm.Settings.SessionReports) return;
         await Task.Delay(TimeSpan.FromSeconds(4));
-        var game = new[] { GameProfile.Retrac(), GameProfile.Fortnite() }
-            .Where(g => File.Exists(g.Paths.GameLog))
-            .OrderByDescending(g => File.GetLastWriteTimeUtc(g.Paths.GameLog))
+        var saved = GameCatalog.SavedDirs()
+            .Where(d => File.Exists(new GamePaths(d).GameLog))
+            .OrderByDescending(d => File.GetLastWriteTimeUtc(new GamePaths(d).GameLog))
             .FirstOrDefault();
-        if (game is null) return;
+        if (saved is null) return;
+        var paths = new GamePaths(saved);
+        var name = _vm.NameForSavedDir(saved);
 
         var (matches, crashed) = await Task.Run(() =>
         {
-            var history = MatchHistory.Load(Aeox.Core.Tweaks.AeoxContext.DefaultDataDir(), game.Kind);
-            history.ImportLogs(game.Paths.LogDir);
+            var history = MatchHistory.Load(Aeox.Core.Tweaks.AeoxContext.DefaultDataDir(), GameCatalog.HistoryKey(saved));
+            history.ImportLogs(paths.LogDir);
             var session = history.Data.Matches.Where(m => m.TimeUtc >= sessionStartUtc.AddMinutes(-1)).ToList();
-            return (session, !EndedCleanly(game.Paths.GameLog));
+            return (session, !EndedCleanly(paths.GameLog));
         });
 
         if (crashed)
         {
-            Notify($"{game.ShortName} closed unexpectedly", "The game did not exit normally. If it keeps happening, open Aeox Checkup.");
+            Notify($"{name} closed unexpectedly", "The game did not exit normally. If it keeps happening, open Aeox Checkup.");
             return;
         }
         if (matches.Count == 0) return;
         var fps = matches.Average(m => m.AvgFps);
         var pings = matches.Where(m => m.PingMs is not null).Select(m => m.PingMs!.Value).ToList();
         var ping = pings.Count > 0 ? $", ping {pings.Average():0} ms" : string.Empty;
-        Notify($"{game.ShortName} session", $"{matches.Count} match{(matches.Count == 1 ? "" : "es")}, {fps:0} FPS average{ping}.");
+        Notify($"{name} session", $"{matches.Count} match{(matches.Count == 1 ? "" : "es")}, {fps:0} FPS average{ping}.");
     }
 
     private static bool EndedCleanly(string log)

@@ -63,11 +63,13 @@ public static class TweakCatalog
                 {
                     list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "bDisableMouseAcceleration", "True", "False"));
                 }
-                if (ctx.Hardware.HasNvidia) list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "LatencyTweak2", ctx.Hardware.IsLaptop ? "1" : "2", "0"));
+                if (ctx.Hardware.HasNvidia && ctx.Game.SupportsReflex) list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "LatencyTweak2", ctx.Hardware.IsLaptop ? "1" : "2", "0"));
                 return list;
             },
-            tag: ctx => ctx.Hardware.HasNvidia ? "reflex · nvidia" : null,
-            describe: ctx => ctx.Hardware.HasNvidia
+            tag: ctx => ctx.Hardware.HasNvidia && ctx.Game.SupportsReflex ? "reflex · nvidia" : null,
+            describe: ctx => !ctx.Game.SupportsReflex
+                ? "Vsync off and raw mouse. This build is older than NVIDIA Reflex."
+                : ctx.Hardware.HasNvidia
                 ? ctx.Hardware.IsLaptop ? "Vsync off, raw mouse and NVIDIA Reflex. Boost stays off to keep the laptop cool." : "Vsync off, raw mouse, NVIDIA Reflex + Boost."
                 : "Vsync off and raw mouse. Reflex needs an NVIDIA card, so it is skipped."),
 

@@ -58,7 +58,7 @@ public sealed class StatsViewModel : Observable
         var ctx = _ctx();
         var history = await Task.Run(() =>
         {
-            var h = MatchHistory.Load(ctx.DataDir, ctx.Game.Kind);
+            var h = MatchHistory.Load(ctx.DataDir, ctx.Game.HistoryKey);
             h.ImportLogs(ctx.Paths.LogDir);
             return h;
         });
@@ -69,7 +69,7 @@ public sealed class StatsViewModel : Observable
     public void RecordApply(string summary)
     {
         var ctx = _ctx();
-        _history ??= MatchHistory.Load(ctx.DataDir, ctx.Game.Kind);
+        _history ??= MatchHistory.Load(ctx.DataDir, ctx.Game.HistoryKey);
         _history.AddApply(summary);
     }
 

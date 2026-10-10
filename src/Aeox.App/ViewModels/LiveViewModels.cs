@@ -124,8 +124,18 @@ public sealed class BackgroundRow : Observable
     }
 
     public RunningApp App { get; }
-    public string Name => App.Def.Name;
-    public string Detail => $"{App.MemoryBytes / 1024.0 / 1024:0} MB  ·  {App.Def.Note}";
+    public string Name => App.Name;
+
+    public string Detail
+    {
+        get
+        {
+            var parts = new List<string> { $"{App.MemoryBytes / 1024.0 / 1024:0} MB", App.HasWindow ? "open window" : "background" };
+            if (!string.IsNullOrWhiteSpace(App.Company)) parts.Add(App.Company!);
+            if (App.Hint is not null) parts.Add(App.Hint);
+            return string.Join("  ·  ", parts);
+        }
+    }
 
     public bool IsSelected
     {
@@ -173,28 +183,29 @@ public sealed class BackgroundViewModel : Observable
 
     public void Refresh()
     {
-        var running = BackgroundApps.Scan();
+        var running = BackgroundApps.Scan(BackgroundApps.GameProcessNames());
+        var chosen = Chosen(_settings).ToHashSet(StringComparer.OrdinalIgnoreCase);
         Rows.Clear();
-        foreach (var app in running)
-            Rows.Add(new BackgroundRow(app, IsChosen(app.Def), () => Remember()));
+        foreach (var app in running) Rows.Add(new BackgroundRow(app, chosen.Contains(app.Key), Remember));
+        var background = running.Where(r => !r.HasWindow).ToList();
         var mb = running.Sum(r => r.MemoryBytes) / 1024.0 / 1024;
         Summary = running.Count == 0
-            ? "No known background apps running. Nice."
-            : $"{running.Count} background app{(running.Count == 1 ? "" : "s")} running, using {mb:0} MB of RAM.";
+            ? "Nothing to close right now."
+            : $"{running.Count} programs you could close ({background.Count} in the background), using {mb:0} MB of RAM. Pick what you don't need.";
         CommandManager.InvalidateRequerySuggested();
     }
 
     public async Task<int> CloseSelectedAsync()
     {
-        var chosen = Rows.Where(r => r.IsSelected).Select(r => r.App.Def).ToList();
-        if (chosen.Count == 0) return 0;
+        var keys = Rows.Where(r => r.IsSelected).Select(r => r.App.Key).ToList();
+        if (keys.Count == 0) return 0;
         _busy = true;
         CommandManager.InvalidateRequerySuggested();
         try
         {
-            var closed = await BackgroundApps.CloseAsync(chosen);
+            var closed = await BackgroundApps.CloseAsync(keys, BackgroundApps.GameProcessNames());
             Refresh();
-            Summary = $"Closed {chosen.Count} app{(chosen.Count == 1 ? "" : "s")}. " + Summary;
+            Summary = $"Closed {keys.Count} program{(keys.Count == 1 ? "" : "s")}. " + Summary;
             return closed;
         }
         finally
@@ -204,18 +215,15 @@ public sealed class BackgroundViewModel : Observable
         }
     }
 
-    public static IEnumerable<BackgroundAppDef> Chosen(AppSettings settings) =>
-        BackgroundApps.All.Where(d => settings.CloseApps is null ? d.CloseByDefault : settings.CloseApps.Contains(d.Name));
-
-    private bool IsChosen(BackgroundAppDef def) => _settings.CloseApps is null ? def.CloseByDefault : _settings.CloseApps.Contains(def.Name);
+    public static IEnumerable<string> Chosen(AppSettings settings) => settings.CloseApps ?? new List<string>();
 
     private void Remember()
     {
-        var chosen = BackgroundApps.All.Where(IsChosen).Select(d => d.Name).ToHashSet();
+        var chosen = Chosen(_settings).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var r in Rows)
         {
-            if (r.IsSelected) chosen.Add(r.Name);
-            else chosen.Remove(r.Name);
+            if (r.IsSelected) chosen.Add(r.App.Key);
+            else chosen.Remove(r.App.Key);
         }
         _settings.CloseApps = chosen.ToList();
         _settings.Save();

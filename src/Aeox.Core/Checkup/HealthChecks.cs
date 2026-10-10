@@ -25,14 +25,6 @@ public static class HealthChecks
         "WinOptimizer", "Game Fire", "PC Optimizer", "Optimizer Pro"
     };
 
-    private static readonly (string Process, string Name)[] HeavyBackgroundApps =
-    {
-        ("NZXT CAM", "NZXT CAM"), ("ArmouryCrate", "Armoury Crate"), ("asus_framework", "Armoury Crate"),
-        ("iCUE", "Corsair iCUE"), ("wallpaper32", "Wallpaper Engine"), ("wallpaper64", "Wallpaper Engine"),
-        ("RazerAppEngine", "Razer Synapse"), ("lghub", "Logitech G HUB"), ("MSI.CentralServer", "MSI Center"),
-        ("OverwolfBrowser", "Overwolf")
-    };
-
     public static IReadOnlyList<CheckResult> RunAll(AeoxContext ctx)
     {
         var results = new List<CheckResult>();
@@ -128,11 +120,11 @@ public static class HealthChecks
 
     private static CheckResult BackgroundApps()
     {
-        var running = Process.GetProcesses().Select(p => p.ProcessName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var found = HeavyBackgroundApps.Where(a => running.Contains(a.Process)).Select(a => a.Name).Distinct().ToList();
-        return found.Count == 0
-            ? new CheckResult("Background apps", CheckStatus.Good, "No known FPS-heavy apps running.")
-            : new CheckResult("Background apps", CheckStatus.Warn, $"{string.Join(", ", found)} running. Close them while playing, they poll hardware and cost frame time.", "Background");
+        var hidden = Aeox.Core.Live.BackgroundApps.Scan(Aeox.Core.Live.BackgroundApps.GameProcessNames()).Where(a => !a.HasWindow).ToList();
+        var mb = hidden.Sum(a => a.MemoryBytes) / 1024 / 1024;
+        return hidden.Count == 0 || mb < 300
+            ? new CheckResult("Background apps", CheckStatus.Good, hidden.Count == 0 ? "Nothing heavy running in the background." : $"{hidden.Count} small background programs, {mb} MB in total.")
+            : new CheckResult("Background apps", CheckStatus.Warn, $"{hidden.Count} programs run in the background with {mb} MB of RAM. Close the ones you don't need while playing.", "Background");
     }
 
     private static CheckResult? Connection()

@@ -2,82 +2,61 @@ using System.Diagnostics;
 
 namespace Aeox.Core.Live;
 
-public sealed record BackgroundAppDef(string Name, string[] Processes, bool CloseByDefault, string Note);
-
-public sealed record RunningApp(BackgroundAppDef Def, long MemoryBytes, int Count);
+public sealed record RunningApp(string Key, string Name, string? Company, long MemoryBytes, int Count, bool HasWindow, string? Hint);
 
 public static class BackgroundApps
 {
-    public static IReadOnlyList<BackgroundAppDef> All { get; } = new List<BackgroundAppDef>
+    private static readonly HashSet<string> Protected = new(StringComparer.OrdinalIgnoreCase)
     {
-        new("NZXT CAM", new[] { "NZXT CAM" }, true, "polls every sensor many times a second"),
-        new("Armoury Crate", new[] { "ArmouryCrate", "ArmouryCrate.UserSessionHelper", "asus_framework" }, true, "asus rgb and fan app"),
-        new("Corsair iCUE", new[] { "iCUE", "Corsair.Service.CpuIdRemote64" }, true, "rgb and sensor polling"),
-        new("SignalRGB", new[] { "SignalRgb", "SignalRgbLauncher" }, true, "rgb effects use cpu and gpu"),
-        new("OpenRGB", new[] { "OpenRGB" }, true, "rgb control"),
-        new("MSI Center", new[] { "MSI.CentralServer", "MSI Center" }, true, "msi utilities"),
-        new("Wallpaper Engine", new[] { "wallpaper32", "wallpaper64" }, true, "renders your desktop while you play"),
-        new("Overwolf", new[] { "Overwolf", "OverwolfBrowser", "OverwolfHelper", "OverwolfHelper64" }, true, "overlay platform"),
-        new("Microsoft Teams", new[] { "ms-teams", "Teams" }, true, "chat app"),
-        new("OneDrive", new[] { "OneDrive" }, true, "syncs files in the background"),
-        new("Dropbox", new[] { "Dropbox" }, true, "syncs files in the background"),
-        new("Google Drive", new[] { "GoogleDriveFS" }, true, "syncs files in the background"),
-        new("Adobe Creative Cloud", new[] { "Creative Cloud", "CCXProcess", "CCLibrary", "AdobeIPCBroker", "Adobe Desktop Service" }, true, "adobe background services"),
-        new("Phone Link", new[] { "PhoneExperienceHost", "YourPhone" }, true, "windows · phone sync"),
-        new("Widgets", new[] { "Widgets", "WidgetService" }, true, "windows · news widgets"),
-        new("Cross Device", new[] { "CrossDeviceResume", "CrossDeviceService" }, true, "windows · continue apps from your phone"),
-        new("Microsoft Store", new[] { "WinStore.App" }, true, "windows · store app"),
-        new("Edge updater", new[] { "MicrosoftEdgeUpdate" }, true, "windows · checks for edge updates"),
-        new("Google updater", new[] { "GoogleUpdate", "GoogleUpdater" }, true, "checks for chrome updates"),
-        new("iCloud", new[] { "iCloudServices", "iCloudDrive", "iCloudPhotos", "iCloudCKKS" }, true, "syncs files and photos"),
-        new("Skype", new[] { "Skype", "SkypeApp", "SkypeBackgroundHost" }, true, "chat app"),
-        new("Xbox app", new[] { "XboxPcApp", "XboxPcAppFT", "XboxApp" }, false, "windows · keep it for game pass games"),
-        new("Xbox Game Bar", new[] { "GameBar", "GameBarFTServer" }, false, "windows · keep it if you use its overlay or an x3d chip"),
-        new("NVIDIA app", new[] { "NVIDIA app", "NVIDIA Overlay" }, false, "closing it stops instant replay and the overlay"),
-        new("AMD Software", new[] { "RadeonSoftware", "AMDRSSrcExt" }, false, "closing it stops amd recording and the overlay"),
-        new("Logitech G HUB", new[] { "lghub", "lghub_agent", "lghub_system_tray" }, false, "closing it can reset mouse dpi and lighting"),
-        new("Razer Synapse", new[] { "RazerAppEngine", "Razer Synapse 3", "Razer Synapse Service Process" }, false, "closing it can reset mouse dpi"),
-        new("SteelSeries GG", new[] { "SteelSeriesGG", "SteelSeriesEngine" }, false, "closing it can reset device settings"),
-        new("Discord", new[] { "Discord" }, false, "keep it if you use voice chat"),
-        new("Spotify", new[] { "Spotify" }, false, "music"),
-        new("Medal", new[] { "medal" }, false, "clip recorder"),
-        new("WhatsApp", new[] { "WhatsApp", "WhatsApp.Root" }, false, "chat app"),
-        new("Google Chrome", new[] { "chrome" }, false, "browser, tabs keep running"),
-        new("Microsoft Edge", new[] { "msedge" }, false, "browser, tabs keep running"),
-        new("Firefox", new[] { "firefox" }, false, "browser, tabs keep running"),
-        new("Opera", new[] { "opera" }, false, "browser, tabs keep running")
+        "Aeox", "AeoxDriver", "AeoxScan",
+        "steam", "steamwebhelper", "steamservice", "EpicGamesLauncher", "EpicWebHelper", "EpicOnlineServices", "EOSOverlayRenderer-Win64-Shipping",
+        "Battle.net", "Agent", "BlizzardError", "RiotClientServices", "RiotClientUx", "RiotClientUxRender", "RiotClientCrashHandler",
+        "EADesktop", "EABackgroundService", "EALocalHostSvc", "upc", "UbisoftConnect", "UplayWebCore", "UbisoftGameLauncher", "UbisoftGameLauncher64",
+        "GalaxyClient", "GalaxyClientService", "RockstarService", "SocialClubHelper", "LauncherPatcher",
+        "EasyAntiCheat", "EasyAntiCheat_EOS", "EasyAntiCheat_Setup", "BEService", "BEService_x64", "vgc", "vgtray", "FACEIT", "faceitservice",
+        "dotnet", "node", "python", "pythonw", "py", "java", "javaw", "ruby", "php", "git", "ssh", "wsl", "wslhost", "wslservice", "bash",
+        "msedgewebview2", "conhost", "dllhost", "OpenConsole", "WindowsTerminal", "cmd", "powershell", "pwsh"
     };
 
-    public static IReadOnlyList<RunningApp> Scan()
+    private static readonly string[] DriverVendors = { "NVIDIA", "Advanced Micro Devices", "AMD", "Intel", "Realtek" };
+
+    private static readonly string[] DriverFolders = { @"\NVIDIA Corporation\", @"\NVIDIA\", @"\AMD\", @"\ATI Technologies\", @"\Intel\", @"\Realtek\", @"\Microsoft GameInput\" };
+
+    private static readonly string[] DeviceVendors = { "Logitech", "Razer", "SteelSeries", "Corsair", "HyperX", "Roccat", "Glorious", "Wooting" };
+
+    private sealed record Proc(Process Process, string Path, bool Window, long Memory);
+
+    public static IEnumerable<string> GameProcessNames() =>
+        Aeox.Core.Game.OtherGames.All.SelectMany(d => d.ExeNames).Select(Path.GetFileNameWithoutExtension).Where(n => n is not null).Select(n => n!)
+            .Append(Aeox.Core.Game.GameRunning.GameProcess);
+
+    public static IReadOnlyList<RunningApp> Scan(IEnumerable<string> keep)
     {
-        var session = Process.GetCurrentProcess().SessionId;
-        var byName = Process.GetProcesses()
-            .Where(p => p.SessionId == session)
-            .GroupBy(p => p.ProcessName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+        var groups = Collect(keep);
         var result = new List<RunningApp>();
-        foreach (var def in All)
+        foreach (var (root, procs) in groups)
         {
-            var procs = def.Processes.Where(byName.ContainsKey).SelectMany(n => byName[n]).ToList();
-            if (procs.Count == 0) continue;
-            long memory = 0;
-            foreach (var p in procs)
-            {
-                try { memory += p.WorkingSet64; } catch (Exception) { }
-            }
-            result.Add(new RunningApp(def, memory, procs.Count));
+            var lead = procs.OrderByDescending(p => p.Window).ThenByDescending(p => p.Memory).First();
+            var info = SafeInfo(lead.Path);
+            var company = info?.CompanyName?.Trim();
+            var name = !string.IsNullOrWhiteSpace(info?.ProductName) && !info!.ProductName!.Contains("Operating System", StringComparison.OrdinalIgnoreCase) ? info.ProductName!.Trim()
+                : !string.IsNullOrWhiteSpace(info?.FileDescription) ? info!.FileDescription!.Trim()
+                : lead.Process.ProcessName;
+            var hint = company is not null && DeviceVendors.Any(v => company.Contains(v, StringComparison.OrdinalIgnoreCase))
+                ? "device software, closing it can reset dpi or lighting" : null;
+            result.Add(new RunningApp(root, name, company, procs.Sum(p => p.Memory), procs.Count, procs.Any(p => p.Window), hint));
         }
-        return result.OrderByDescending(r => r.MemoryBytes).ToList();
+        foreach (var p in groups.SelectMany(g => g.Value)) p.Process.Dispose();
+        return result.OrderBy(a => a.HasWindow).ThenByDescending(a => a.MemoryBytes).ToList();
     }
 
-    public static async Task<int> CloseAsync(IEnumerable<BackgroundAppDef> apps)
+    public static async Task<int> CloseAsync(IEnumerable<string> keys, IEnumerable<string> keep)
     {
-        var session = Process.GetCurrentProcess().SessionId;
-        var names = apps.SelectMany(a => a.Processes).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var targets = Process.GetProcesses().Where(p => p.SessionId == session && names.Contains(p.ProcessName)).ToList();
+        var wanted = keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var targets = Collect(keep).Where(g => wanted.Contains(g.Key)).SelectMany(g => g.Value).ToList();
         foreach (var p in targets)
         {
-            try { p.CloseMainWindow(); } catch (Exception) { }
+            try { p.Process.CloseMainWindow(); } catch (Exception) { }
         }
         await Task.Delay(2500);
         var closed = 0;
@@ -85,7 +64,7 @@ public static class BackgroundApps
         {
             try
             {
-                if (!p.HasExited) p.Kill();
+                if (!p.Process.HasExited) p.Process.Kill();
                 closed++;
             }
             catch (Exception)
@@ -93,9 +72,92 @@ public static class BackgroundApps
             }
             finally
             {
-                p.Dispose();
+                p.Process.Dispose();
             }
         }
         return closed;
+    }
+
+    private static Dictionary<string, List<Proc>> Collect(IEnumerable<string> keep)
+    {
+        var keepSet = new HashSet<string>(keep, StringComparer.OrdinalIgnoreCase);
+        using var me = Process.GetCurrentProcess();
+        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        var all = new List<Proc>();
+        foreach (var p in Process.GetProcesses())
+        {
+            if (p.SessionId != me.SessionId || p.Id == me.Id)
+            {
+                p.Dispose();
+                continue;
+            }
+            string? path = null;
+            try { path = p.MainModule?.FileName; } catch (Exception) { }
+            if (path is null)
+            {
+                p.Dispose();
+                continue;
+            }
+            long memory = 0;
+            try { memory = p.WorkingSet64; } catch (Exception) { }
+            all.Add(new Proc(p, path, p.MainWindowHandle != IntPtr.Zero, memory));
+        }
+
+        var blockedRoots = all.Where(p => Protected.Contains(p.Process.ProcessName) || keepSet.Contains(p.Process.ProcessName))
+            .Select(p => RootOf(p.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var groups = new Dictionary<string, List<Proc>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in all)
+        {
+            var root = RootOf(p.Path);
+            var skip = blockedRoots.Contains(root)
+                       || p.Path.StartsWith(windows, StringComparison.OrdinalIgnoreCase)
+                       || DriverFolders.Any(f => p.Path.Contains(f, StringComparison.OrdinalIgnoreCase))
+                       || IsDriverVendor(p.Path);
+            if (skip)
+            {
+                p.Process.Dispose();
+                continue;
+            }
+            if (!groups.TryGetValue(root, out var list)) groups[root] = list = new List<Proc>();
+            list.Add(p);
+        }
+        return groups;
+    }
+
+    private static string RootOf(string path)
+    {
+        string[] bases =
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WindowsApps"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs"),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+        };
+        foreach (var b in bases)
+        {
+            if (string.IsNullOrEmpty(b) || !path.StartsWith(b + "\\", StringComparison.OrdinalIgnoreCase)) continue;
+            var parts = path[(b.Length + 1)..].Split('\\');
+            if (parts.Length < 2) return Path.GetDirectoryName(path)!;
+            var depth = parts[0] is "Desktop" or "Downloads" or "Documents" or "OneDrive" or "Common Files" or "Temp" && parts.Length > 2 ? 2 : 1;
+            return Path.Combine(new[] { b }.Concat(parts.Take(depth)).ToArray());
+        }
+        return Path.GetDirectoryName(path) ?? path;
+    }
+
+    private static bool IsDriverVendor(string path)
+    {
+        var company = SafeInfo(path)?.CompanyName?.Trim();
+        return company is not null && DriverVendors.Any(v => company.StartsWith(v, StringComparison.OrdinalIgnoreCase)) &&
+               !path.Contains(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static FileVersionInfo? SafeInfo(string path)
+    {
+        try { return FileVersionInfo.GetVersionInfo(path); }
+        catch (Exception) { return null; }
     }
 }

@@ -121,7 +121,7 @@ public sealed class AutoMode : IDisposable
 
     private async Task CloseAppsAsync(string gameName)
     {
-        var closed = await Aeox.Core.Live.BackgroundApps.CloseAsync(BackgroundViewModel.Chosen(_vm.Settings));
+        var closed = await Aeox.Core.Live.BackgroundApps.CloseAsync(BackgroundViewModel.Chosen(_vm.Settings), Aeox.Core.Live.BackgroundApps.GameProcessNames());
         if (closed > 0) Notify("Background apps closed", $"Closed {closed} background process{(closed == 1 ? "" : "es")} for {gameName}.");
     }
 

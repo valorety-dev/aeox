@@ -249,7 +249,7 @@
                                 </StackPanel>
                             </DockPanel>
                         </Border>
-                        <TextBlock Text="only known non-essential apps are listed. game launchers, anti-cheat, drivers, explorer, typing and security processes are never touched. windows services are left alone too: turning them off needs admin and often breaks updates or search. windows may start some of these again later." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,16,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="aeox scans what runs on this pc. windows itself, game launchers, anti-cheat, graphics and audio drivers and your games are never listed. windows services are left alone too: turning them off needs admin and often breaks updates or search. some apps start again with windows." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,16,0,0" TextWrapping="Wrap" />
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

@@ -27,6 +27,8 @@ public partial class MainWindow : Window
 
         _auto = new AutoMode(this, _vm);
         _auto.ExitRequested += ExitApp;
+        _auto.UpdateRequested += () => RestartForUpdate(true);
+        _vm.UpdateRequested += () => RestartForUpdate(false);
         if (_vm.Settings.StartWithWindows) AutoMode.SetStartWithWindows(true);
         Closing += OnClosing;
     }
@@ -47,6 +49,20 @@ public partial class MainWindow : Window
         e.Cancel = true;
         Hide();
         _auto.HintRunningInTray();
+    }
+
+    private void RestartForUpdate(bool tray)
+    {
+        if (!_vm.Updates.TryApply(tray))
+        {
+            if (!tray)
+                MessageBox.Show("Aeox could not replace its own file here. Move Aeox.exe to a folder you can write to, or download the new version from the site.",
+                    "Aeox", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        _exiting = true;
+        _auto.Dispose();
+        Application.Current.Shutdown();
     }
 
     private void ExitApp()

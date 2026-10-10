@@ -55,6 +55,24 @@ public sealed class AutoMode : IDisposable
     }
 
     public event Action? ExitRequested;
+    public event Action? UpdateRequested;
+
+    private DateTime _nextUpdateCheck = DateTime.UtcNow.AddSeconds(20);
+    private bool _updateTried;
+
+    private void CheckUpdates(bool gameRunning)
+    {
+        if (DateTime.UtcNow >= _nextUpdateCheck)
+        {
+            _nextUpdateCheck = DateTime.UtcNow.AddHours(4);
+            _ = _vm.Updates.CheckAsync();
+        }
+        if (!_updateTried && _vm.Updates.IsReady && !gameRunning && !_window.IsVisible)
+        {
+            _updateTried = true;
+            UpdateRequested?.Invoke();
+        }
+    }
 
     public static void SetStartWithWindows(bool enabled)
     {
@@ -90,6 +108,7 @@ public sealed class AutoMode : IDisposable
         }
         if (!running) _noted = false;
         WatchAnyGame();
+        CheckUpdates(running || _anyWasRunning);
         if (!running && _gameWasRunning) _ = OnGameClosedAsync(_sessionStartUtc);
         _gameWasRunning = running;
 

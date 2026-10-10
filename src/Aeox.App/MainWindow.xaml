@@ -136,6 +136,15 @@
                     <RadioButton Style="{StaticResource NavButton}" GroupName="Nav" Tag="11" Content="settings" IsChecked="{Binding Page, Converter={StaticResource PageIs}, ConverterParameter=Settings}" CommandParameter="Settings" Margin="0,16,0,0" />
                 </StackPanel>
 
+                <Border Grid.Row="3" Margin="24,0,20,16" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1" Padding="12,10"
+                        Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}">
+                    <StackPanel>
+                        <TextBlock Text="update" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding UpdateText}" FontWeight="Bold" Margin="0,4,0,0" TextWrapping="Wrap" />
+                        <Button Style="{StaticResource PrimaryButton}" Height="26" Padding="10,0" FontSize="11.5" Content="restart and update" Command="{Binding UpdateNowCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+
                 <Border Grid.Row="4" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="24,14">
                     <TextBlock Text="made by valorety" FontSize="11.5" Foreground="{StaticResource FaintBrush}" />
                 </Border>

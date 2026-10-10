@@ -57,6 +57,8 @@ public sealed class MainViewModel : Observable
         RestoreCommand = new RelayCommand(RestoreAll, () => Engine.Store.All.Count > 0);
         NavigateCommand = new ParamCommand(p => Page = p ?? "Performance");
         PickForPcCommand = new RelayCommand(PickForPc);
+        Updates.Changed += () => System.Windows.Application.Current?.Dispatcher.Invoke(() => { Raise(nameof(UpdateReady)); Raise(nameof(UpdateText)); });
+        UpdateNowCommand = new RelayCommand(() => UpdateRequested?.Invoke());
         Refresh();
     }
 
@@ -127,6 +129,12 @@ public sealed class MainViewModel : Observable
     public ObservableCollection<GameChoice> Games { get; } = new();
     public ICommand AddGameCommand { get; }
     public ICommand FindGamesCommand { get; }
+
+    public Aeox.App.Tools.Updater Updates { get; } = new();
+    public ICommand UpdateNowCommand { get; }
+    public event Action? UpdateRequested;
+    public bool UpdateReady => Updates.IsReady;
+    public string UpdateText => Updates.ReadyVersion is { } v ? $"aeox {v.ToString(3)} is ready" : string.Empty;
 
     public string FindGamesText => _scanning ? "searching..." : "find games";
 
@@ -835,6 +843,8 @@ public sealed record SectionHeader(string Text);
 public sealed class GameRow : Observable
 {
     private bool _isCurrent;
+
+    public override string ToString() => Title;
 
     public GameRow(GameProfile profile, bool current, Action<GameProfile> open)
     {

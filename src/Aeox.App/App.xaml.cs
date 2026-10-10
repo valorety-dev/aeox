@@ -20,12 +20,37 @@ public partial class App : Application
             Shutdown(Aeox.Core.Changes.Elevation.RunFromFile(e.Args[1]));
             return;
         }
+        var afterUpdate = e.Args.Contains(Aeox.App.Tools.Updater.AfterUpdateArg, StringComparer.OrdinalIgnoreCase);
+        var tray = e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase);
         _instance = new Mutex(true, InstanceName, out var isFirst);
+        if (!isFirst && afterUpdate)
+        {
+            try
+            {
+                isFirst = _instance.WaitOne(TimeSpan.FromSeconds(20));
+            }
+            catch (AbandonedMutexException)
+            {
+                isFirst = true;
+            }
+        }
         if (!isFirst)
         {
             if (EventWaitHandle.TryOpenExisting(ShowSignalName, out var existing)) existing.Set();
             Shutdown();
             return;
+        }
+
+        Aeox.App.Tools.Updater.Cleanup();
+        if (!afterUpdate && Aeox.App.Tools.Updater.PendingOnDisk() is { } pending)
+        {
+            var updater = new Aeox.App.Tools.Updater();
+            updater.UsePending(pending);
+            if (updater.TryApply(tray))
+            {
+                Shutdown();
+                return;
+            }
         }
 
         base.OnStartup(e);
@@ -45,7 +70,7 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         var window = new MainWindow();
         MainWindow = window;
-        if (!e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase)) window.Show();
+        if (!tray) window.Show();
 
         _showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ShowSignalName);
         var listener = new Thread(() =>

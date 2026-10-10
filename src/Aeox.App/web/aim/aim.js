@@ -981,7 +981,7 @@ function renderSettings() {
     : imp ? `read from your ${imp.source}. same feel as in game.`
     : custom ? "type your cm/360 from any game. aeox matches it exactly."
     : profile.game === "fortnite" || profile.game === "overwatch"
-      ? `${g.name} keeps sensitivity in your online account, so type it once. fov is horizontal on 16:9.`
+      ? `${g.name} keeps your real sensitivity in an encrypted cloud save, so type the value from your in game settings once.`
       : "not found on this pc, type your in game value. fov is horizontal on 16:9.";
   resize();
   paintCrosshair();
@@ -1093,11 +1093,13 @@ document.querySelectorAll("[data-win]").forEach((b) => b.addEventListener("click
 function init(data) {
   load(data?.profile);
   imports = data?.imports ?? [];
-  for (const i of imports) {
-    if (profile.imported?.includes(i.game)) continue;
-    profile.sens[i.game] = +i.sens;
-    if (i.hFov) profile.fov[i.game] = +i.hFov;
-    profile.imported = [...(profile.imported ?? []), i.game];
+  profile.synced ??= {};
+  for (const game of new Set(imports.map((i) => i.game))) {
+    const latest = imports.find((i) => i.game === game);
+    if (profile.synced[game] === +latest.sens) continue;
+    profile.sens[game] = +latest.sens;
+    if (latest.hFov) profile.fov[game] = +latest.hFov;
+    profile.synced[game] = +latest.sens;
   }
   if (!data?.profile && imports.length) profile.game = imports[0].game;
   store();

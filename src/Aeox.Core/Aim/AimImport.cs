@@ -49,8 +49,10 @@ public static partial class AimImport
         var root = Path.Combine(Local, "VALORANT", "Saved", "Config");
         if (!Directory.Exists(root)) yield break;
         var seen = new HashSet<double>();
+        var active = ActiveValorantAccount();
         var files = Directory.EnumerateFiles(root, "RiotUserSettings.ini", SearchOption.AllDirectories)
-            .OrderByDescending(File.GetLastWriteTimeUtc).ToList();
+            .OrderByDescending(f => active is not null && f.Contains(active, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(File.GetLastWriteTimeUtc).ToList();
         var n = 0;
         foreach (var file in files)
         {
@@ -59,8 +61,41 @@ public static partial class AimImport
             var rounded = Math.Round(sens.Value, 4);
             n++;
             if (!seen.Add(rounded)) continue;
-            yield return new ImportedSens("valorant", rounded, null, 103, $"valorant account {n}, played {File.GetLastWriteTime(file):MMM d}".ToLowerInvariant());
+            var source = active is not null && file.Contains(active, StringComparison.OrdinalIgnoreCase)
+                ? "valorant account you played last"
+                : $"other valorant account {n}";
+            yield return new ImportedSens("valorant", rounded, null, 103, source);
         }
+    }
+
+    private static string? ActiveValorantAccount()
+    {
+        var logs = Path.Combine(Local, "VALORANT", "Saved", "Logs");
+        var config = Path.Combine(Local, "VALORANT", "Saved", "Config");
+        if (!Directory.Exists(logs) || !Directory.Exists(config)) return null;
+        var ids = Directory.EnumerateDirectories(config)
+            .Select(Path.GetFileName)
+            .Select(d => Regex.Match(d ?? "", @"^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", RegexOptions.IgnoreCase))
+            .Where(m => m.Success).Select(m => m.Groups[1].Value).ToList();
+        if (ids.Count == 0) return null;
+        foreach (var log in Directory.EnumerateFiles(logs, "ShooterGame*.log").OrderByDescending(File.GetLastWriteTimeUtc).Take(3))
+        {
+            string text;
+            try
+            {
+                using var stream = new FileStream(log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                text = reader.ReadToEnd();
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+            var best = ids.Select(id => (id, last: text.LastIndexOf(id, StringComparison.OrdinalIgnoreCase)))
+                .Where(x => x.last >= 0).OrderByDescending(x => x.last).FirstOrDefault();
+            if (best.id is not null) return best.id;
+        }
+        return null;
     }
 
     private static IEnumerable<ImportedSens> Cs2Accounts()

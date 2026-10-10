@@ -46,7 +46,7 @@ public sealed class ChangeEngine
                 {
                     target = change.Value;
                 }
-                else if (_store.TryGet(change, out var original) && !ValuesEqual(original, change.Value))
+                else if (_store.TryGet(change, out var original))
                 {
                     target = original;
                     revert = RevertKind.Original;

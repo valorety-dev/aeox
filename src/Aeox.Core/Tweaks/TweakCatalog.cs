@@ -25,7 +25,7 @@ public static class TweakCatalog
     private static readonly string[] LowScalabilityGroups =
     {
         "sg.ViewDistanceQuality", "sg.AntiAliasingQuality", "sg.ShadowQuality", "sg.PostProcessQuality",
-        "sg.TextureQuality", "sg.EffectsQuality", "sg.FoliageQuality", "sg.ShadingQuality"
+        "sg.EffectsQuality", "sg.FoliageQuality", "sg.ShadingQuality"
     };
 
     public static IReadOnlyList<Tweak> All { get; } = new List<Tweak>
@@ -86,7 +86,6 @@ public static class TweakCatalog
                     list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "foliage.LODDistanceScale", "0.1"));
                     list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "foliage.DitheredLOD", "0"));
                     list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "r.StaticMeshLODDistanceScale", "3"));
-                    list.Add(Change.Ini(ctx.Paths.Engine, Cvars, "r.MaxAnisotropy", "0"));
                 }
                 else
                 {
@@ -356,8 +355,25 @@ public static class TweakCatalog
                 RenderScale(75),
                 RenderScale(50)
             },
-            recommended: ctx => ctx.Hardware.Tier == GpuTier.Entry ? "75%" : null)
+            recommended: ctx => ctx.Hardware.Tier == GpuTier.Entry ? "75%" : null),
+
+        new("textures", TweakCategory.Visuals,
+            "Textures",
+            "How sharp skins and surfaces look. Costs video memory, barely any FPS. Low looks blurry even at 100% 3D resolution.",
+            "",
+            new[]
+            {
+                ChoiceOption.Keep,
+                Textures("Low", 0),
+                Textures("Medium", 1),
+                Textures("High", 2)
+            },
+            recommended: ctx => ctx.Hardware.IntegratedOnly || (ctx.Hardware.VramGb > 0 && ctx.Hardware.VramGb < 4.5) ? "Low"
+                : ctx.Hardware.VramGb > 0 && ctx.Hardware.VramGb < 7.5 ? "Medium" : "High")
     };
+
+    private static ChoiceOption Textures(string label, int level) =>
+        new(label, ctx => new[] { Change.Ini(ctx.Paths.GameUserSettings, Scalability, "sg.TextureQuality", level.ToString()) });
 
     public static IEnumerable<Tweak> For(TweakCategory category) => All.Where(t => t.Category == category);
 

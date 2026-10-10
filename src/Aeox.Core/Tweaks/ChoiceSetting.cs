@@ -12,11 +12,13 @@ public sealed record ChoiceOption(string Label, Func<AeoxContext, IReadOnlyList<
 public sealed class ChoiceSetting
 {
     private readonly Func<AeoxContext, bool> _supported;
+    private readonly Func<AeoxContext, string?> _recommended;
 
     public ChoiceSetting(string id, TweakCategory category, string title, string description, string glyph,
-        IReadOnlyList<ChoiceOption> options, Func<AeoxContext, bool>? supported = null)
+        IReadOnlyList<ChoiceOption> options, Func<AeoxContext, bool>? supported = null, Func<AeoxContext, string?>? recommended = null)
     {
         _supported = supported ?? (_ => true);
+        _recommended = recommended ?? (_ => null);
         Id = id;
         Category = category;
         Title = title;
@@ -33,6 +35,14 @@ public sealed class ChoiceSetting
     public IReadOnlyList<ChoiceOption> Options { get; }
 
     public bool IsSupported(AeoxContext ctx) => _supported(ctx);
+
+    public int? RecommendedIndex(AeoxContext ctx)
+    {
+        var label = _recommended(ctx);
+        if (label is null) return null;
+        var i = Options.ToList().FindIndex(o => o.Label == label);
+        return i >= 0 ? i : null;
+    }
 
     public int DetectSelected(AeoxContext ctx, ChangeEngine engine)
     {

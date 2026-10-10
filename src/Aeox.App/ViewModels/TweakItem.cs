@@ -13,6 +13,12 @@ public sealed class TweakItem : Observable, ISettingItem
     {
         Tweak = tweak;
         Changes = tweak.Changes(ctx);
+        Description = tweak.Describe(ctx);
+        IsRecommended = tweak.IsRecommended(ctx);
+        var parts = new List<string>();
+        if (tweak.Tag(ctx) is { } tag) parts.Add(tag);
+        if (Changes.Any(c => c.NeedsAdmin)) parts.Add("asks for admin");
+        TagText = string.Join("  ·  ", parts);
         _isApplied = isApplied;
         _isOn = isApplied;
         _onChanged = onChanged;
@@ -21,7 +27,11 @@ public sealed class TweakItem : Observable, ISettingItem
     public Tweak Tweak { get; }
     public IReadOnlyList<Change> Changes { get; }
     public string Title => Tweak.Title;
-    public string Description => Tweak.Description;
+    public string Description { get; }
+    public string TagText { get; }
+    public bool HasTag => TagText.Length > 0;
+    public bool IsRecommended { get; }
+    public bool NeedsAdmin => Changes.Any(c => c.NeedsAdmin);
     public string Glyph => Tweak.Glyph;
     public bool IsActive => _isApplied;
     public bool IsReverting => !_isOn && _isApplied;

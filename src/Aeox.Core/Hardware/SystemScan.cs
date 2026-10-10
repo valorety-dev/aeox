@@ -66,7 +66,7 @@ public static class SystemScan
 
         var gpuName = hw.Gpus.FirstOrDefault(g => g.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) || g.Contains("Radeon RX", StringComparison.OrdinalIgnoreCase))
                       ?? hw.Gpus.FirstOrDefault() ?? "unknown gpu";
-        var vram = VideoMemoryGb(gpuName);
+        var vram = HardwareInfo.VideoMemoryGb(gpuName);
         parts.Add(new PartInfo("gpu", Short(gpuName),
             vram > 0 ? $"{vram:0} gb vram" : "dedicated graphics",
             bottleneck == "gpu" ? "limit" : "ok",
@@ -123,26 +123,6 @@ public static class SystemScan
         {
         }
         return (Environment.ProcessorCount / 2, Environment.ProcessorCount, 0);
-    }
-
-    private static double VideoMemoryGb(string gpuName)
-    {
-        try
-        {
-            using var cls = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}");
-            if (cls is null) return 0;
-            foreach (var sub in cls.GetSubKeyNames())
-            {
-                using var key = cls.OpenSubKey(sub);
-                if (key?.GetValue("DriverDesc") is not string desc || !string.Equals(desc.Trim(), gpuName.Trim(), StringComparison.OrdinalIgnoreCase)) continue;
-                if (key.GetValue("HardwareInformation.qwMemorySize") is long bytes) return bytes / 1024.0 / 1024 / 1024;
-                if (key.GetValue("HardwareInformation.qwMemorySize") is byte[] raw && raw.Length >= 8) return BitConverter.ToInt64(raw, 0) / 1024.0 / 1024 / 1024;
-            }
-        }
-        catch (Exception)
-        {
-        }
-        return 0;
     }
 
     private static (long Gb, int Speed, int Sticks, bool Jedec) MemoryDetails()

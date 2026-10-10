@@ -62,6 +62,16 @@ public sealed class ChoiceItem : Observable, ISettingItem
         Options = new ObservableCollection<ChoiceOptionItem>(setting.Options.Select((o, i) => new ChoiceOptionItem(this, o, i)));
         _applied = _selected = setting.DetectSelected(ctx, engine);
         Options[_selected].SetSilently(true);
+        RecommendedIndex = setting.RecommendedIndex(ctx);
+    }
+
+    public int? RecommendedIndex { get; }
+
+    public bool PickRecommended()
+    {
+        if (RecommendedIndex is not { } i || _applied == i) return false;
+        Options[i].IsSelected = true;
+        return true;
     }
 
     public ChoiceSetting Setting { get; }

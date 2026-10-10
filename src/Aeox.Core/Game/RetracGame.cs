@@ -59,6 +59,7 @@ public sealed class GameProfile
     public bool IsFortnite { get; init; } = true;
     public IReadOnlyList<string> SettingsFiles { get; init; } = Array.Empty<string>();
     public Func<Aeox.Core.Tweaks.AeoxContext, IReadOnlyList<Aeox.Core.Tweaks.Tweak>>? Tweaks { get; init; }
+    public Func<Aeox.Core.Tweaks.AeoxContext, IReadOnlyList<Aeox.Core.Tweaks.ChoiceSetting>>? Choices { get; init; }
     public string? Note { get; init; }
 
     public bool ConfigExists => IsFortnite ? Paths.ConfigExists : SettingsFiles.Any(File.Exists);

@@ -395,6 +395,9 @@ public sealed class MainViewModel : Observable
 
     private IEnumerable<Tweak> GameTweaks => Ctx.Game.Tweaks?.Invoke(Ctx) ?? Array.Empty<Tweak>();
 
+    private IEnumerable<ChoiceSetting> AllChoices =>
+        Ctx.Game.IsFortnite ? TweakCatalog.Choices : Ctx.Game.Choices?.Invoke(Ctx) ?? Array.Empty<ChoiceSetting>();
+
     private IEnumerable<Tweak> AllTweaks =>
         (Ctx.Game.IsFortnite ? TweakCatalog.All : TweakCatalog.All.Where(t => t.Category is TweakCategory.System or TweakCategory.Network))
         .Concat(GameTweaks);
@@ -440,8 +443,7 @@ public sealed class MainViewModel : Observable
         {
             var section = new List<object>();
             var shared = category is TweakCategory.System or TweakCategory.Network || Ctx.Game.IsFortnite;
-            if (Ctx.Game.IsFortnite)
-                section.AddRange(TweakCatalog.ChoicesFor(category).Where(c => c.IsSupported(Ctx)).Select(c => new ChoiceItem(c, Ctx, Engine, OnItemChanged)));
+            section.AddRange(AllChoices.Where(c => c.Category == category && c.IsSupported(Ctx)).Select(c => new ChoiceItem(c, Ctx, Engine, OnItemChanged)));
             var tweaks = shared ? TweakCatalog.For(category) : Enumerable.Empty<Tweak>();
             section.AddRange(tweaks.Concat(gameTweaks.Where(t => t.Category == category))
                 .Where(t => t.IsSupported(Ctx))
@@ -561,7 +563,7 @@ public sealed class MainViewModel : Observable
             }
             else if (parts[0] == "choice" && parts.Length == 3)
             {
-                var setting = TweakCatalog.Choices.FirstOrDefault(c => c.Id == parts[1]);
+                var setting = AllChoices.FirstOrDefault(c => c.Id == parts[1]);
                 var option = setting?.Options.FirstOrDefault(o => o.Label == parts[2]);
                 if (setting is not null && option is not null && setting.IsSupported(Ctx)) desired.Add(($"{setting.Title}: {option.Label}", option.Changes(Ctx), true));
             }

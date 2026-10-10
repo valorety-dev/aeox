@@ -18,6 +18,7 @@ public sealed class AimWindow : Window
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly WebView2 _view = new() { DefaultBackgroundColor = System.Drawing.Color.FromArgb(11, 11, 12) };
     private readonly Grid _root = new();
+    private RawMouse? _raw;
 
     public static string ProfilePath => Path.Combine(AeoxContext.DefaultDataDir(), "aim", "profile.json");
 
@@ -74,6 +75,8 @@ public sealed class AimWindow : Window
             if (!e.Uri.StartsWith("https://aim.aeox/", StringComparison.OrdinalIgnoreCase)) e.Cancel = true;
         };
         core.Navigate("https://aim.aeox/index.html");
+        _raw = new RawMouse(new WindowInteropHelper(this).Handle, (x, y) => core.PostWebMessageAsString($"r{x},{y}"));
+        Closed += (_, _) => _raw?.Dispose();
     }
 
     private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)

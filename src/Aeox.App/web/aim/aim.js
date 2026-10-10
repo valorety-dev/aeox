@@ -20,18 +20,17 @@ const DIST = { near: [4, 10], mid: [10, 24], far: [24, 48] };
 const SPEED = { slow: [18, 32], fast: [40, 70] };
 
 const PRESETS = [
-  { id: "gridshot", name: "gridshot", note: "three big targets, fast clicks", kind: "flick", count: 3, duration: 60,
-    size: { small: 0, medium: 1, large: 3 }, dist: { near: 3, mid: 2, far: 0 }, dir: { left: 1, right: 1, up: 1, down: 1 } },
-  { id: "precision", name: "precision", note: "small and medium targets close together", kind: "flick", count: 3, duration: 60,
-    size: { small: 2, medium: 2, large: 0 }, dist: { near: 2, mid: 2, far: 0 }, dir: { left: 1, right: 1, up: 1, down: 1 } },
-  { id: "flick", name: "flick", note: "one target, long flicks", kind: "flick", count: 1, duration: 60,
-    size: { small: 1, medium: 2, large: 1 }, dist: { near: 0, mid: 2, far: 3 }, dir: { left: 1, right: 1, up: 1, down: 1 } },
-  { id: "microflick", name: "microflick", note: "tiny targets right next to you", kind: "flick", count: 1, duration: 60,
-    size: { small: 3, medium: 1, large: 0 }, dist: { near: 3, mid: 1, far: 0 }, dir: { left: 1, right: 1, up: 1, down: 1 } },
-  { id: "switching", name: "switching", note: "spread out targets, switch fast", kind: "flick", count: 4, duration: 60,
-    size: { small: 1, medium: 2, large: 0 }, dist: { near: 0, mid: 2, far: 2 }, dir: { left: 1, right: 1, up: 1, down: 1 } },
-  { id: "tracking", name: "tracking", note: "stay on a strafing target", kind: "tracking", count: 1, duration: 45,
-    size: { small: 0, medium: 2, large: 1 }, speed: { slow: 1, fast: 1 }, axis: { h: 3, v: 1 } }
+  { id: "gridshot", name: "gridshot", note: "three targets on a 5x5 grid. click them as fast as you can", kind: "flick", mode: "grid", count: 3, duration: 60 },
+  { id: "sixshot", name: "sixshot", note: "six small targets spread over the wall. clear them clean", kind: "flick", mode: "six", count: 6, duration: 60 },
+  { id: "spidershot", name: "spidershot", note: "center, flick out, back to center. every direction", kind: "flick", mode: "spider", count: 1, duration: 60 },
+  { id: "precision", name: "precision", note: "every target starts big and shrinks. the smaller you hit it, the more points", kind: "flick", mode: "precision", count: 1, duration: 60 },
+  { id: "microshot", name: "microshot", note: "tiny targets just next to your crosshair. small, exact corrections", kind: "flick", mode: "micro", count: 1, duration: 60 },
+  { id: "reflexshot", name: "reflexshot", note: "a target flashes up somewhere. hit it before it is gone", kind: "flick", mode: "reflex", count: 1, duration: 60 },
+  { id: "multishot", name: "multishot", note: "three targets, three hits each. finish one, switch to the next", kind: "flick", mode: "multi", count: 3, duration: 60 },
+  { id: "strafetrack", name: "strafetrack", note: "hold click on a target strafing left and right", kind: "tracking", count: 1, duration: 45,
+    size: { small: 0, medium: 1, large: 0 }, speed: { slow: 1, fast: 2 }, axis: { h: 1, v: 0, c: 0 } },
+  { id: "circletrack", name: "circletrack", note: "hold click on a target moving in circles", kind: "tracking", count: 1, duration: 45,
+    size: { small: 0, medium: 1, large: 0 }, speed: { slow: 1, fast: 1 }, axis: { h: 0, v: 0, c: 1 } }
 ];
 
 const defaults = () => ({
@@ -316,6 +315,8 @@ scene.add(sun);
 const sphereGeo = new THREE.SphereGeometry(1, 12, 8);
 const whiteMat = new THREE.MeshLambertMaterial({ color: 0xd9d8d4 });
 const accentMat = new THREE.MeshLambertMaterial({ color: 0x8f80ff, emissive: 0x2a1f66, emissiveIntensity: 0.35 });
+const midMat = new THREE.MeshLambertMaterial({ color: 0xc3b9ff, emissive: 0x2a1f66, emissiveIntensity: 0.2 });
+const hpMats = [accentMat, midMat, whiteMat];
 
 function resize() {
   const w = window.innerWidth;
@@ -348,6 +349,94 @@ function pick(weights) {
 const rand = ([a, b]) => a + Math.random() * (b - a);
 
 let run = null;
+
+const sizeKeyOf = (r) => (r < 1.4 ? "small" : r < 2.25 ? "medium" : "large");
+const aimDir = (ty, tp) => new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(tp * DEG, ty * DEG, 0, "YXZ"));
+
+function clearOf(ty, tp, radiusDeg) {
+  const dir = aimDir(ty, tp);
+  return (run?.targets ?? []).every((t) => angleTo(dir, t.position) > (radiusDeg + t.userData.radiusDeg) * 1.6);
+}
+
+function place(ty, tp, radiusDeg, distance = 14) {
+  const mesh = new THREE.Mesh(sphereGeo, whiteMat);
+  mesh.scale.setScalar(distance * Math.tan(radiusDeg * DEG));
+  mesh.position.copy(camera.position).add(aimDir(ty, tp).multiplyScalar(distance));
+  mesh.userData = { radiusDeg, sizeKey: sizeKeyOf(radiusDeg), born: performance.now(), distance, ty, tp };
+  mesh.updateMatrixWorld();
+  scene.add(mesh);
+  return mesh;
+}
+
+function spawnFree(radiusDeg, yawRange, pMin, pMax) {
+  let ty = 0, tp = 0;
+  for (let i = 0; i < 24; i++) {
+    ty = rand([-yawRange, yawRange]);
+    tp = rand([pMin, pMax]);
+    if (clearOf(ty, tp, radiusDeg)) break;
+  }
+  return place(ty, tp, radiusDeg);
+}
+
+function spawnGrid() {
+  const taken = new Set((run?.targets ?? []).map((t) => t.userData.cell));
+  if (run?.lastCell !== undefined) taken.add(run.lastCell);
+  const free = [...Array(25).keys()].filter((c) => !taken.has(c));
+  const cell = free[Math.floor(Math.random() * free.length)];
+  const m = place((cell % 5 - 2) * 5, 7 + (Math.floor(cell / 5) - 2) * 5, 1.9);
+  m.userData.cell = cell;
+  return m;
+}
+
+function spawnSpider() {
+  run.spiderOut = !run.spiderOut;
+  if (!run.spiderOut) return place(0, 6, 1.5);
+  const a = Math.random() * Math.PI * 2;
+  const d = rand([12, 30]);
+  return place(Math.cos(a) * d, THREE.MathUtils.clamp(6 + Math.sin(a) * d * 0.6, -3, 24), 1.5);
+}
+
+function spawnMicro() {
+  const a = Math.random() * Math.PI * 2;
+  const d = rand([2, 7]);
+  const ty = THREE.MathUtils.clamp(yaw / DEG + Math.cos(a) * d, -45, 45);
+  const tp = THREE.MathUtils.clamp(pitch / DEG + Math.sin(a) * d, -3, 24);
+  return place(ty, tp, 0.75);
+}
+
+function spawnReflex() {
+  let ty = 0, tp = 0;
+  for (let i = 0; i < 24; i++) {
+    ty = rand([-32, 32]);
+    tp = rand([0, 18]);
+    if (Math.hypot(ty - yaw / DEG, tp - pitch / DEG) > 9) break;
+  }
+  const m = place(ty, tp, 1.6);
+  m.userData.life = 1000;
+  return m;
+}
+
+function spawn(map) {
+  switch (map.mode) {
+    case "grid": return spawnGrid();
+    case "six": return spawnFree(1.15, 22, -2, 16);
+    case "spider": return spawnSpider();
+    case "micro": return spawnMicro();
+    case "reflex": return spawnReflex();
+    case "precision": {
+      const m = spawnFree(3, 18, 0, 14);
+      Object.assign(m.userData, { from: 3, to: 0.35, life: 2200 });
+      return m;
+    }
+    case "multi": {
+      const m = spawnFree(1.7, 26, 0, 18);
+      m.userData.hp = 3;
+      m.material = hpMats[2];
+      return m;
+    }
+    default: return spawnFlick(map, false);
+  }
+}
 
 function spawnFlick(map, highlight) {
   const sizeKey = pick(map.size);
@@ -383,6 +472,7 @@ function spawnFlick(map, highlight) {
   mesh.scale.setScalar(r);
   mesh.position.copy(pos);
   mesh.userData = { sizeKey, radiusDeg, born: performance.now() };
+  mesh.updateMatrixWorld();
   scene.add(mesh);
   return mesh;
 }
@@ -393,18 +483,32 @@ function spawnTracker(map) {
   const r = distance * Math.tan(radiusDeg * DEG);
   const mesh = new THREE.Mesh(sphereGeo, accentMat.clone());
   mesh.scale.setScalar(r);
-  mesh.userData = { sizeKey, radiusDeg, ty: 0, tp: 4, vy: 0, vp: 0, next: 0, distance, speedKey: "slow", axisKey: "h" };
+  const first = !run?.started;
+  mesh.userData = { sizeKey, radiusDeg, ty: first ? 0 : rand([-25, 25]), tp: first ? 5 : rand([2, 14]), vy: 0, vp: 0, next: 0, distance, speedKey: "slow", axisKey: "h", hp: 1.6 };
   scene.add(mesh);
   retarget(mesh, map);
   placeTracker(mesh);
   return mesh;
 }
 
+const ORBIT = 8;
+
 function retarget(mesh, map) {
   const u = mesh.userData;
+  const was = u.axisKey;
   u.speedKey = pick(map.speed ?? { slow: 1, fast: 1 });
   u.axisKey = pick(map.axis ?? { h: 3, v: 1 });
   const s = rand(SPEED[u.speedKey]) * (Math.random() < 0.5 ? -1 : 1);
+  if (u.axisKey === "c") {
+    if (was !== "c" || u.cx === undefined) {
+      u.a = Math.random() * Math.PI * 2;
+      u.cx = THREE.MathUtils.clamp(u.ty - ORBIT * Math.cos(u.a), -28, 28);
+      u.cy = THREE.MathUtils.clamp(u.tp - ORBIT * 0.8 * Math.sin(u.a), 4, 14);
+    }
+    u.w = (s / ORBIT) * 1.2;
+    u.next = performance.now() + 1200 + Math.random() * 1800;
+    return;
+  }
   if (u.axisKey === "h") { u.vy = s; u.vp = s * (Math.random() - 0.5) * 0.3; }
   else { u.vp = s * 0.7; u.vy = s * (Math.random() - 0.5) * 0.4; }
   u.next = performance.now() + 350 + Math.random() * 900;
@@ -419,6 +523,13 @@ function placeTracker(mesh) {
 function updateTracker(mesh, dt, map) {
   const u = mesh.userData;
   if (performance.now() > u.next) retarget(mesh, map);
+  if (u.axisKey === "c") {
+    u.a += u.w * dt;
+    u.ty = u.cx + ORBIT * Math.cos(u.a);
+    u.tp = u.cy + ORBIT * 0.8 * Math.sin(u.a);
+    placeTracker(mesh);
+    return;
+  }
   u.ty += u.vy * dt;
   u.tp += u.vp * dt;
   if (u.ty > 45 || u.ty < -45) { u.vy = -u.vy; u.ty = THREE.MathUtils.clamp(u.ty, -45, 45); }
@@ -440,25 +551,60 @@ function flickKeys(u, fromDir, pos) {
   const dist = Math.hypot(dx, dy);
   const dir = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? "left" : "right") : (dy > 0 ? "up" : "down");
   const distKey = dist < 10 ? "near" : dist < 24 ? "mid" : "far";
-  return { size: "size:" + u.sizeKey, dist: "dist:" + distKey, dir: "dir:" + dir, distance: dist };
+  return { size: "size:" + sizeKeyOf(u.radiusDeg), dist: "dist:" + distKey, dir: "dir:" + dir, distance: dist };
 }
 
 function startRun(map) {
   clearTargets();
   yaw = 0; pitch = 0;
+  firing = false;
   run = {
-    map, started: 0, ends: 0, targets: [], shots: 0, hits: 0, times: [], lastDir: forward(), lastShot: 0,
-    flick: {}, track: {}, onTime: 0, totalTime: 0, paused: false, last: performance.now()
+    map, started: 0, ends: 0, targets: [], shots: 0, hits: 0, points: 0, kills: 0, times: [], lastDir: forward(), lastShot: 0,
+    flick: {}, track: {}, onTime: 0, totalTime: 0, paused: false, last: performance.now(), spiderOut: true, nextAt: 0
   };
-  $("mapLabel").textContent = `${map.kind === "tracking" ? "track" : "grid"} / ${map.name}`;
+  $("mapLabel").textContent = `${map.kind === "tracking" ? "track" : "click"} / ${map.name}`;
   if (map.kind === "tracking") run.targets.push(spawnTracker(map));
-  else for (let i = 0; i < map.count; i++) run.targets.push(spawnFlick(map, false));
+  else if (map.mode !== "reflex") for (let i = 0; i < map.count; i++) run.targets.push(spawn(map));
   markAccent();
   showGate(map.name);
 }
 
+function respawn(now) {
+  if (run.map.mode === "reflex") run.nextAt = now + rand([350, 900]);
+  else run.targets.push(spawn(run.map));
+  markAccent();
+}
+
+function removeTarget(t) {
+  scene.remove(t);
+  run.targets = run.targets.filter((x) => x !== t);
+}
+
+function expire(t, now) {
+  run.shots++;
+  const keys = flickKeys(t.userData, run.lastDir, t.position);
+  for (const k of [keys.size, keys.dist, keys.dir]) bucketAdd(run.flick, k, "shots", 1);
+  removeTarget(t);
+  respawn(now);
+}
+
+function onHit(hit, now) {
+  const u = hit.userData;
+  if (run.map.mode === "multi") {
+    u.hp--;
+    run.points += 50;
+    if (u.hp > 0) { hit.material = hpMats[u.hp - 1]; return; }
+    run.kills++;
+  } else if (run.map.mode === "precision") run.points += Math.round((100 * u.from) / u.radiusDeg);
+  else if (run.map.mode === "reflex") run.points += 100 + Math.max(0, Math.round((u.life - (now - u.born)) / 5));
+  else run.points += 100;
+  if (u.cell !== undefined) run.lastCell = u.cell;
+  removeTarget(hit);
+  respawn(now);
+}
+
 function markAccent() {
-  if (!run || run.map.kind === "tracking") return;
+  if (!run || run.map.kind === "tracking" || run.map.mode) return;
   run.targets.forEach((t, i) => (t.material = run.map.count > 1 && i === 0 ? accentMat : whiteMat));
 }
 
@@ -476,10 +622,12 @@ function begin() {
     run.ends = now + run.map.duration * 1000;
     run.lastShot = now;
     for (const t of run.targets) t.userData.born = now;
+    if (run.map.mode === "reflex") run.nextAt = now + 700;
   } else if (run.paused) {
     const gap = now - run.pausedAt;
     run.ends += gap;
     run.lastShot += gap;
+    if (run.nextAt) run.nextAt += gap;
     for (const t of run.targets) t.userData.born += gap;
   }
   run.paused = false;
@@ -493,7 +641,10 @@ function lock() {
   if (p && p.catch) p.catch(() => canvas.requestPointerLock());
 }
 
+let firing = false;
+
 document.addEventListener("pointerlockchange", () => {
+  firing = false;
   if (document.pointerLockElement === canvas) begin();
   else if (run && run.started && !run.done) {
     run.paused = true;
@@ -505,18 +656,26 @@ document.addEventListener("pointerlockchange", () => {
   }
 });
 
-document.addEventListener("mousemove", (e) => {
+let nativeRaw = false;
+
+function look(dx, dy) {
   if (document.pointerLockElement !== canvas || !run || run.paused) return;
   const k = degPerCount() * DEG;
-  yaw -= e.movementX * k;
-  pitch -= e.movementY * k;
+  yaw -= dx * k;
+  pitch -= dy * k;
   pitch = THREE.MathUtils.clamp(pitch, -89 * DEG, 89 * DEG);
+}
+
+document.addEventListener("mousemove", (e) => {
+  if (!nativeRaw) look(e.movementX, e.movementY);
 });
 
 const ray = new THREE.Raycaster();
 
 document.addEventListener("mousedown", (e) => {
-  if (e.button !== 0 || document.pointerLockElement !== canvas || !run || run.paused || run.map.kind === "tracking") return;
+  if (e.button !== 0 || document.pointerLockElement !== canvas || !run || run.paused) return;
+  firing = true;
+  if (run.map.kind === "tracking" || !run.started || run.done) return;
   const now = performance.now();
   run.shots++;
   camera.rotation.set(pitch, yaw, 0);
@@ -525,7 +684,7 @@ document.addEventListener("mousedown", (e) => {
   const hit = ray.intersectObjects(run.targets, false)[0]?.object;
   const dir = forward();
   const target = hit ?? run.targets.reduce((best, t) => (!best || angleTo(dir, t.position) < angleTo(dir, best.position) ? t : best), null);
-  if (!target) return;
+  if (!target) { run.lastShot = now; return; }
   const keys = flickKeys(target.userData, run.lastDir, target.position);
   for (const k of [keys.size, keys.dist, keys.dir]) bucketAdd(run.flick, k, "shots", 1);
   if (hit) {
@@ -539,14 +698,13 @@ document.addEventListener("mousedown", (e) => {
     }
     run.hits++;
     run.times.push(ms);
-    scene.remove(hit);
-    run.targets = run.targets.filter((t) => t !== hit);
-    run.targets.push(spawnFlick(run.map, false));
-    markAccent();
+    onHit(hit, now);
   }
   run.lastDir = dir;
   run.lastShot = now;
 });
+
+document.addEventListener("mouseup", (e) => { if (e.button === 0) firing = false; });
 
 let fpsFrames = 0;
 let fpsSince = performance.now();
@@ -555,7 +713,7 @@ function frame() {
   const now = performance.now();
   fpsFrames++;
   if (now - fpsSince >= 500) {
-    $("hint").textContent = `${Math.round((fpsFrames * 1000) / (now - fpsSince))} fps  ·  esc pause`;
+    $("hint").textContent = `${Math.round((fpsFrames * 1000) / (now - fpsSince))} fps  ·  ${nativeRaw ? "raw input" : "browser input"}  ·  esc pause`;
     fpsFrames = 0;
     fpsSince = now;
   }
@@ -568,13 +726,32 @@ function frame() {
       updateTracker(t, dt, run.map);
       camera.updateMatrixWorld();
       const on = angleTo(forward(), t.position) <= t.userData.radiusDeg;
-      run.onTime += on ? dt : 0;
+      const hot = on && firing;
+      run.onTime += hot ? dt : 0;
       run.totalTime += dt;
       for (const k of ["speed:" + t.userData.speedKey, "axis:" + t.userData.axisKey, "size:" + t.userData.sizeKey]) {
         bucketAdd(run.track, k, "total", dt);
-        if (on) bucketAdd(run.track, k, "on", dt);
+        if (hot) bucketAdd(run.track, k, "on", dt);
       }
-      t.material.emissiveIntensity = on ? 0.9 : 0.35;
+      t.material.emissiveIntensity = hot ? 1 : on ? 0.6 : 0.3;
+      if (hot && (t.userData.hp -= dt) <= 0) {
+        run.kills++;
+        removeTarget(t);
+        run.targets.push(spawnTracker(run.map));
+      }
+    } else {
+      for (const t of [...run.targets]) {
+        const u = t.userData;
+        if (u.from) {
+          u.radiusDeg = u.from + (u.to - u.from) * Math.min(1, (now - u.born) / u.life);
+          t.scale.setScalar(u.distance * Math.tan(u.radiusDeg * DEG));
+        }
+        if (u.life && now - u.born >= u.life) expire(t, now);
+      }
+      if (run.nextAt && now >= run.nextAt && run.targets.length === 0) {
+        run.nextAt = 0;
+        run.targets.push(spawn(run.map));
+      }
     }
     const left = Math.max(0, run.ends - now);
     $("timer").textContent = clock(left);
@@ -614,7 +791,7 @@ function finish() {
   const tracking = run.map.kind === "tracking";
   const acc = tracking ? (run.totalTime ? run.onTime / run.totalTime : 0) : (run.shots ? run.hits / run.shots : 0);
   const avg = run.times.length ? run.times.reduce((a, b) => a + b, 0) / run.times.length : 0;
-  const score = tracking ? Math.round(acc * 10000) : Math.round(run.hits * 100 * acc);
+  const score = tracking ? Math.round(acc * 10000 + run.kills * 100) : Math.round(run.points * acc);
   if (tracking) merge(profile.track, run.track, 0.85);
   else merge(profile.flick, run.flick, 0.85);
   profile.runs.unshift({ map: run.map.name, kind: run.map.kind, score, acc: +(acc * 100).toFixed(1), hits: run.hits, ms: Math.round(avg), at: Date.now() });
@@ -625,7 +802,7 @@ function finish() {
   $("resScore").textContent = score.toLocaleString("en-US");
   const best = Math.max(...profile.runs.filter((r) => r.map === run.map.name).map((r) => r.score));
   const stats = tracking
-    ? [["on target", `${(acc * 100).toFixed(1)}%`], ["best", best.toLocaleString("en-US")], ["time", `${run.map.duration}s`], ["mode", "tracking"]]
+    ? [["on target", `${(acc * 100).toFixed(1)}%`], ["kills", run.kills], ["best", best.toLocaleString("en-US")], ["time", `${run.map.duration}s`]]
     : [["accuracy", `${(acc * 100).toFixed(1)}%`], ["hits", run.hits], ["avg time to hit", `${Math.round(avg)} ms`], ["best", best.toLocaleString("en-US")]];
   $("resStats").innerHTML = stats.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("");
   renderWeak($("resWeak"), 3);
@@ -651,7 +828,7 @@ function analyse() {
       list.push({ group: g, key: r.k, label: labels[r.k], deficit, line: `${Math.round(r.hit * 100)}% hits  ·  ${Math.round(r.ms)} ms` });
     }
   }
-  const trackGroups = [["speed", ["slow", "fast"], { slow: "slow tracking", fast: "fast tracking" }], ["axis", ["h", "v"], { h: "side to side tracking", v: "up and down tracking" }]];
+  const trackGroups = [["speed", ["slow", "fast"], { slow: "slow tracking", fast: "fast tracking" }], ["axis", ["h", "v", "c"], { h: "side to side tracking", v: "up and down tracking", c: "circle tracking" }]];
   for (const [g, keys, labels] of trackGroups) {
     const rows = keys.map((k) => ({ k, b: profile.track[`${g}:${k}`] })).filter((r) => r.b && r.b.total >= 4);
     if (rows.length === 0) continue;
@@ -683,7 +860,7 @@ function buildFromWeakness() {
   const flickWeak = weak.filter((w) => !trackWeak.includes(w));
   const top = weak[0];
   if (top && trackWeak.includes(top)) {
-    const map = { id: `my-${Date.now()}`, name: "my map", kind: "tracking", count: 1, duration: 45, size: { small: 1, medium: 2, large: 0 }, speed: { slow: 1, fast: 1 }, axis: { h: 1, v: 1 } };
+    const map = { id: `my-${Date.now()}`, name: "my map", kind: "tracking", count: 1, duration: 45, size: { small: 1, medium: 2, large: 0 }, speed: { slow: 1, fast: 1 }, axis: { h: 1, v: 1, c: 1 } };
     for (const w of trackWeak) map[w.group][w.key] = 1 + Math.round(w.deficit * 6);
     map.name = "my map · " + trackWeak.slice(0, 2).map((w) => w.label.replace(" tracking", "")).join(", ");
     return map;
@@ -699,6 +876,7 @@ let editing = null;
 
 function openBuilder(map) {
   editing = JSON.parse(JSON.stringify(map));
+  if (editing.axis) editing.axis.c ??= 0;
   $("mapName").value = editing.name;
   const fields = [];
   const slider = (path, label, min, max, step) => {
@@ -725,6 +903,7 @@ function openBuilder(map) {
     slider("speed.fast", "fast strafes", 0, 4, 1);
     slider("axis.h", "side to side", 0, 4, 1);
     slider("axis.v", "up and down", 0, 4, 1);
+    slider("axis.c", "circles", 0, 4, 1);
   }
   $("builderFields").innerHTML = fields.join("");
   $("builderFields").querySelectorAll("input[type=range]").forEach((inp) => inp.addEventListener("input", () => {
@@ -751,7 +930,7 @@ function mapCard(map, mine) {
 }
 
 function describe(map) {
-  if (map.kind === "tracking") return `tracking  ·  ${Object.entries(map.axis).filter(([, v]) => v > 0).map(([k]) => (k === "h" ? "side to side" : "up and down")).join(", ")}`;
+  if (map.kind === "tracking") return `hold click  ·  ${Object.entries(map.axis).filter(([, v]) => v > 0).map(([k]) => ({ h: "side to side", v: "up and down", c: "circles" })[k]).join(", ")}`;
   const top = (o) => Object.entries(o).filter(([, v]) => v > 1).map(([k]) => k);
   const parts = [...top(map.size), ...top(map.dist), ...top(map.dir)];
   return `${map.count} at once${parts.length ? "  ·  " + parts.join(", ") : ""}`;
@@ -927,7 +1106,17 @@ function init(data) {
 }
 
 if (bridge) {
-  bridge.addEventListener("message", (e) => { if (e.data?.type === "init") init(e.data); });
+  bridge.addEventListener("message", (e) => {
+    if (typeof e.data === "string") {
+      if (e.data[0] === "r") {
+        nativeRaw = true;
+        const c = e.data.indexOf(",");
+        look(Number(e.data.slice(1, c)), Number(e.data.slice(c + 1)));
+      }
+      return;
+    }
+    if (e.data?.type === "init") init(e.data);
+  });
   send("ready");
 } else {
   let saved = null;

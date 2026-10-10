@@ -25,47 +25,24 @@ public static partial class AimImport
             {
             }
         }
-        try
-        {
-            list.AddRange(ValorantAccounts());
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
-        try
-        {
-            list.AddRange(Cs2Accounts());
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
+        Try(Valorant);
+        Try(Cs2);
         Try(Apex);
         Try(Cod);
         return list;
     }
 
-    private static IEnumerable<ImportedSens> ValorantAccounts()
+    private static ImportedSens? Valorant()
     {
-        var root = Path.Combine(Local, "VALORANT", "Saved", "Config");
-        if (!Directory.Exists(root)) yield break;
-        var seen = new HashSet<double>();
         var active = ActiveValorantAccount();
-        var files = Directory.EnumerateFiles(root, "RiotUserSettings.ini", SearchOption.AllDirectories)
-            .OrderByDescending(f => active is not null && f.Contains(active, StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(File.GetLastWriteTimeUtc).ToList();
-        var n = 0;
-        foreach (var file in files)
-        {
-            var sens = Find(File.ReadAllText(file), @"EAresFloatSettingName::MouseSensitivity=([\d.]+)");
-            if (sens is null) continue;
-            var rounded = Math.Round(sens.Value, 4);
-            n++;
-            if (!seen.Add(rounded)) continue;
-            var source = active is not null && file.Contains(active, StringComparison.OrdinalIgnoreCase)
-                ? "valorant account you played last"
-                : $"other valorant account {n}";
-            yield return new ImportedSens("valorant", rounded, null, 103, source);
-        }
+        if (active is null) return null;
+        var file = Directory.EnumerateDirectories(Path.Combine(Local, "VALORANT", "Saved", "Config"))
+            .Where(d => Path.GetFileName(d).StartsWith(active, StringComparison.OrdinalIgnoreCase))
+            .Select(d => Path.Combine(d, "Windows", "RiotUserSettings.ini"))
+            .FirstOrDefault(File.Exists);
+        if (file is null) return null;
+        var sens = Find(File.ReadAllText(file), @"EAresFloatSettingName::MouseSensitivity=([\d.]+)");
+        return sens is null ? null : new ImportedSens("valorant", Math.Round(sens.Value, 4), null, 103, "valorant account you played last");
     }
 
     private static string? ActiveValorantAccount()
@@ -98,28 +75,34 @@ public static partial class AimImport
         return null;
     }
 
-    private static IEnumerable<ImportedSens> Cs2Accounts()
+    private static ImportedSens? Cs2()
     {
-        var files = OtherGames.SteamLibraries()
-            .Select(l => Path.Combine(l, "userdata"))
-            .Where(Directory.Exists)
-            .SelectMany(u => Directory.EnumerateDirectories(u))
-            .Select(u => Path.Combine(u, "730", "local", "cfg", "cs2_user_convars_0_slot0.vcfg"))
-            .Where(File.Exists)
-            .OrderByDescending(File.GetLastWriteTimeUtc)
-            .ToList();
-        var seen = new HashSet<double>();
-        var n = 0;
-        foreach (var file in files)
+        var libs = OtherGames.SteamLibraries();
+        if (libs.Count == 0) return null;
+        var login = Path.Combine(libs[0], "config", "loginusers.vdf");
+        if (!File.Exists(login)) return null;
+        var users = new List<(long id, long stamp)>();
+        long current = 0;
+        foreach (var line in File.ReadLines(login))
         {
+            var t = line.Trim();
+            var id = Regex.Match(t, "^\"(7656\\d{13})\"$");
+            if (id.Success) { current = long.Parse(id.Groups[1].Value, CultureInfo.InvariantCulture); continue; }
+            var stamp = Regex.Match(t, "^\"Timestamp\"\\s+\"(\\d+)\"");
+            if (stamp.Success && current != 0) users.Add((current, long.Parse(stamp.Groups[1].Value, CultureInfo.InvariantCulture)));
+        }
+        foreach (var (id, _) in users.OrderByDescending(u => u.stamp))
+        {
+            var account = (id - 76561197960265728L).ToString(CultureInfo.InvariantCulture);
+            var file = libs.Select(l => Path.Combine(l, "userdata", account, "730", "local", "cfg", "cs2_user_convars_0_slot0.vcfg")).FirstOrDefault(File.Exists);
+            if (file is null) continue;
             var text = File.ReadAllText(file);
             var sens = Find(text, "\"sensitivity\"\\s+\"([\\d.]+)\"");
             if (sens is null) continue;
-            n++;
-            if (!seen.Add(Math.Round(sens.Value, 4))) continue;
             var yaw = Find(text, "\"m_yaw\"\\s+\"([\\d.]+)\"");
-            yield return new ImportedSens("cs2", sens.Value, yaw, 106.26, $"cs2 steam account {n}, played {File.GetLastWriteTime(file):MMM d}".ToLowerInvariant());
+            return new ImportedSens("cs2", sens.Value, yaw, 106.26, "steam account you logged in with last");
         }
+        return null;
     }
     private static ImportedSens? Apex()
     {

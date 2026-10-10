@@ -167,9 +167,7 @@ public static class TweakCatalog
             },
             ctx => ctx.GameExe is not null && ctx.Hardware.HasMultipleGpus,
             tag: _ => "2 gpus",
-            describe: ctx => ctx.Hardware.DedicatedGpu is { } gpu
-                ? $"Fortnite always runs on your {ShortGpu(gpu)}, never the built-in graphics."
-                : "Fortnite always runs on your graphics card."),
+            describe: _ => "Fortnite always runs on your graphics card, never the built-in graphics."),
 
         new("no-fso", TweakCategory.System,
             "Disable fullscreen optimizations",
@@ -270,7 +268,7 @@ public static class TweakCatalog
             ctx => ctx.Hardware.Adapter is not null,
             recommended: ctx => !ctx.Hardware.IsLaptop,
             tag: ctx => AdapterTag(ctx),
-            describe: ctx => $"{ctx.Hardware.Adapter?.Name} stays awake between packets. Reconnects for a few seconds when applied."),
+            describe: ctx => $"Your {(ctx.Hardware.IsWireless ? "Wi-Fi card" : "network card")} stays awake between packets. Reconnects for a few seconds when applied."),
 
         new("adapter-batching", TweakCategory.Network,
             "Interrupt moderation off",
@@ -292,8 +290,6 @@ public static class TweakCatalog
     };
 
     private static bool WantsBalanced(HardwareInfo hw) => hw.IsX3D || hw.IsLaptop;
-
-    private static string ShortGpu(string name) => name.Replace("NVIDIA ", string.Empty).Replace("(TM)", string.Empty).Replace("(R)", string.Empty).Trim();
 
     private static string? AdapterTag(AeoxContext ctx) => ctx.Hardware.Adapter is { } a ? (a.IsWireless ? "wi-fi" : "ethernet") : null;
 

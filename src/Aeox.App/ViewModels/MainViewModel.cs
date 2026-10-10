@@ -36,6 +36,7 @@ public sealed class MainViewModel : Observable
         Engine = new ChangeEngine(new OriginalStore(System.IO.Path.Combine(AeoxContext.DefaultDataDir(), "originals.json")));
         Ctx = null!;
         Pages = Array.Empty<PageViewModel>();
+        NetworkTweaks = null!;
         Network = null!;
         BuildForGame(Settings.Game);
         Checkup = new CheckupViewModel(() => Ctx, p => Page = p);
@@ -45,6 +46,7 @@ public sealed class MainViewModel : Observable
         ApplyCommand = new RelayCommand(Apply, () => _plan.Count > 0);
         RestoreCommand = new RelayCommand(RestoreAll, () => Engine.Store.All.Count > 0);
         NavigateCommand = new ParamCommand(p => Page = p ?? "Performance");
+        PickForPcCommand = new RelayCommand(PickForPc);
         Refresh();
     }
 
@@ -53,6 +55,7 @@ public sealed class MainViewModel : Observable
     public ChangeEngine Engine { get; }
     public IReadOnlyList<PageViewModel> Pages { get; private set; }
     public NetworkViewModel Network { get; private set; }
+    public PageViewModel NetworkTweaks { get; private set; }
     public CheckupViewModel Checkup { get; }
     public StatsViewModel Stats { get; }
 
@@ -91,9 +94,13 @@ public sealed class MainViewModel : Observable
             BuildPage(TweakCategory.Visuals, "Visuals", "04", "how the game is displayed."),
             BuildPage(TweakCategory.System, "System", "06", "windows settings that affect the game.")
         };
+        NetworkTweaks = BuildPage(TweakCategory.Network, "Network", "05", "internet tweaks");
         Network = new NetworkViewModel(Ctx);
         Raise(nameof(Ctx));
         Raise(nameof(Pages));
+        Raise(nameof(NetworkTweaks));
+        Raise(nameof(PcUnlocked));
+        Raise(nameof(PcHidden));
         Raise(nameof(Network));
         Raise(nameof(CurrentPage));
         Raise(nameof(IsRetrac));
@@ -105,8 +112,70 @@ public sealed class MainViewModel : Observable
     public ICommand ApplyCommand { get; }
     public ICommand RestoreCommand { get; }
     public ICommand NavigateCommand { get; }
+    public ICommand PickForPcCommand { get; }
 
-    private IEnumerable<ISettingItem> AllItems => Pages.SelectMany(p => p.Items.OfType<ISettingItem>());
+    private IEnumerable<ISettingItem> AllItems => Pages.Append(NetworkTweaks).SelectMany(p => p.Items.OfType<ISettingItem>());
+
+    public string PcCpu
+    {
+        get
+        {
+            var hw = Ctx.Hardware;
+            var extra = hw.IsDualCcdX3D ? "  ·  3D V-Cache, 2 CCDs" : hw.IsX3D ? "  ·  3D V-Cache" : string.Empty;
+            return $"{Clean(hw.CpuName)}  ·  {hw.Cores} cores / {hw.Threads} threads{extra}";
+        }
+    }
+
+    public string PcGpu
+    {
+        get
+        {
+            var hw = Ctx.Hardware;
+            var tier = hw.Tier switch { GpuTier.Fast => "fast", GpuTier.Mid => "mid-range", _ => "entry level" };
+            var vram = hw.VramGb > 0 && !hw.IntegratedOnly ? $"  ·  {hw.VramGb:0} GB" : string.Empty;
+            return hw.IntegratedOnly ? $"{Clean(hw.PrimaryGpu)}  ·  built-in graphics, {tier}" : $"{Clean(hw.PrimaryGpu)}{vram}  ·  {tier}";
+        }
+    }
+
+    public string PcRest
+    {
+        get
+        {
+            var hw = Ctx.Hardware;
+            var net = hw.Adapter is { } a ? $"{(a.IsWireless ? "Wi-Fi" : "Ethernet")} ({a.Name})" : "no network adapter found";
+            return $"{hw.RamGb} GB RAM  ·  {(hw.IsLaptop ? "laptop" : "desktop")}  ·  {hw.RefreshRate} Hz  ·  {net}";
+        }
+    }
+
+    public string PcUnlocked
+    {
+        get
+        {
+            var tagged = TweakCatalog.All.Where(t => t.IsSupported(Ctx) && t.Tag(Ctx) is not null).Select(t => $"{t.Title} ({t.Tag(Ctx)})").ToList();
+            return tagged.Count == 0 ? "No hardware-specific extras for this PC." : "Unlocked for this PC: " + string.Join(",  ", tagged) + ".";
+        }
+    }
+
+    public string PcHidden
+    {
+        get
+        {
+            var hidden = TweakCatalog.All.Count(t => !t.IsSupported(Ctx));
+            return hidden == 0 ? string.Empty : $"{hidden} tweak{(hidden == 1 ? " is" : "s are")} hidden because {(hidden == 1 ? "it does" : "they do")} not fit this PC or game.";
+        }
+    }
+
+    private static string Clean(string name) => name.Replace("(R)", string.Empty).Replace("(TM)", string.Empty).Replace(" Processor", string.Empty).Replace("  ", " ").Trim();
+
+    private void PickForPc()
+    {
+        foreach (var item in AllItems)
+        {
+            if (item is TweakItem { IsRecommended: true } t) t.IsOn = true;
+            if (item is ChoiceItem c) c.PickRecommended();
+        }
+        Page = "Performance";
+    }
 
     public string Page
     {
@@ -200,7 +269,9 @@ public sealed class MainViewModel : Observable
             if (RetracGame.IsGameRunning())
                 SetStatus(StatusKind.Warning, "Close Fortnite to apply", "Aeox writes the settings while the game is closed.");
             else
-                SetStatus(StatusKind.Pending, $"{_plan.Count} change{(_plan.Count == 1 ? "" : "s")} ready", "Takes effect next time you launch Retrac.");
+                SetStatus(StatusKind.Pending, $"{_plan.Count} change{(_plan.Count == 1 ? "" : "s")} ready",
+                    (_plan.Any(p => p.Change.NeedsAdmin) && !Elevation.IsAdmin ? "Windows asks for admin once. " : string.Empty) +
+                    $"Takes effect next time you launch {Ctx.Game.ShortName}.");
             return;
         }
         if (_justRestored is not null)
@@ -272,7 +343,8 @@ public sealed class MainViewModel : Observable
             if (parts[0] == "tweak")
             {
                 var tweak = TweakCatalog.All.FirstOrDefault(t => t.Id == parts[1]);
-                if (tweak is not null && tweak.IsSupported(Ctx)) desired.Add((tweak.Title, tweak.Changes(Ctx), true));
+                if (tweak is not null && tweak.IsSupported(Ctx) && (Elevation.IsAdmin || !tweak.Changes(Ctx).Any(c => c.NeedsAdmin)))
+                    desired.Add((tweak.Title, tweak.Changes(Ctx), true));
             }
             else if (parts[0] == "choice" && parts.Length == 3)
             {
@@ -403,6 +475,20 @@ public sealed class MainViewModel : Observable
                                 new PreviewToken("/setactive ", TokenKind.Text),
                                 new PreviewToken(PowerPlans.Name(p.NewValue), TokenKind.String),
                                 new PreviewToken($"   was {PowerPlans.Name(p.OldValue)}", TokenKind.Muted));
+                        }
+                        break;
+
+                    case ChangeKind.Adapter:
+                        Add(false,
+                            new PreviewToken("adapter ", TokenKind.Keyword),
+                            new PreviewToken(Ctx.Hardware.Adapter?.Name ?? "network adapter", TokenKind.String));
+                        foreach (var p in byTarget)
+                        {
+                            Add(false,
+                                new PreviewToken($"    {p.Change.Key}", TokenKind.Text),
+                                new PreviewToken(" = ", TokenKind.Muted),
+                                new PreviewToken(p.NewValue is null ? "driver default" : StripType(p.NewValue), TokenKind.String),
+                                new PreviewToken(p.OldValue is null ? "   new" : $"   was {StripType(p.OldValue)}", TokenKind.Muted));
                         }
                         break;
 

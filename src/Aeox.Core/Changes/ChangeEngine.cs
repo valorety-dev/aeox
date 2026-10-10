@@ -20,7 +20,7 @@ public sealed class ChangeEngine
         ChangeKind.FileReadOnly => File.Exists(change.Target)
             ? (new FileInfo(change.Target).IsReadOnly ? "true" : "false")
             : null,
-        ChangeKind.Registry => ReadRegistry(change.Target, change.Key),
+        ChangeKind.Registry or ChangeKind.Adapter => ReadRegistry(change.Target, change.Key),
         ChangeKind.PowerPlan => Aeox.Core.Windows.PowerPlans.GetActive(),
         _ => null
     };
@@ -77,9 +77,17 @@ public sealed class ChangeEngine
     public void Apply(IReadOnlyList<PlannedChange> plan)
     {
         if (plan.Count == 0) return;
+        var admin = plan.Where(p => p.Change.NeedsAdmin).ToList();
+        var elevate = admin.Count > 0 && !Elevation.IsAdmin;
+        if (elevate) Elevation.Run(admin);
         foreach (var p in plan) _store.Remember(p.Change, p.OldValue);
         _store.Save();
+        Write(elevate ? plan.Where(p => !p.Change.NeedsAdmin).ToList() : plan);
+    }
 
+    public static void Write(IReadOnlyList<PlannedChange> plan)
+    {
+        if (plan.Count == 0) return;
         var readOnlyTargets = plan
             .Where(p => p.Change.Kind == ChangeKind.FileReadOnly)
             .ToDictionary(p => p.Change.Target, p => p.NewValue, StringComparer.OrdinalIgnoreCase);
@@ -99,9 +107,14 @@ public sealed class ChangeEngine
             if (wasReadOnly && !readOnlyTargets.ContainsKey(file)) SetReadOnly(file, true);
         }
 
-        foreach (var p in plan.Where(p => p.Change.Kind == ChangeKind.Registry))
+        foreach (var p in plan.Where(p => p.Change.Kind is ChangeKind.Registry or ChangeKind.Adapter))
         {
             WriteRegistry(p.Change.Target, p.Change.Key, p.NewValue);
+        }
+
+        foreach (var device in plan.Where(p => p.Change.Kind == ChangeKind.Adapter).Select(p => p.Change.Section).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            RestartDevice(device);
         }
 
         foreach (var (file, value) in readOnlyTargets)
@@ -135,6 +148,24 @@ public sealed class ChangeEngine
         return double.TryParse(a, System.Globalization.NumberStyles.Float, inv, out var x)
                && double.TryParse(b, System.Globalization.NumberStyles.Float, inv, out var y)
                && Math.Abs(x - y) < 1e-6;
+    }
+
+    private static void RestartDevice(string deviceId)
+    {
+        try
+        {
+            var pnputil = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "pnputil.exe");
+            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pnputil)
+            {
+                ArgumentList = { "/restart-device", deviceId },
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
+            p?.WaitForExit(20000);
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+        }
     }
 
     private static void SetReadOnly(string file, bool on)

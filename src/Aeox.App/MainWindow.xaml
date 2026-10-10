@@ -50,7 +50,8 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
                         <TextBlock x:Name="Name" Text="{Binding Title}" />
-                        <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding TagText}" FontSize="11.5" Foreground="{StaticResource AccentBrush}" Margin="0,4,0,0" Visibility="{Binding HasTag, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
                     <ToggleButton Grid.Column="1" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsOn, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Title}" />
                 </Grid>
@@ -158,7 +159,24 @@
                             <TextBlock Text="{Binding Summary}" FontSize="12.5" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" />
                         </StackPanel>
                     </Border>
-                    <StackPanel Margin="36,4,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                    <StackPanel Margin="36,24,36,0" MaxWidth="680" HorizontalAlignment="Left" DataContext="{Binding DataContext, ElementName=Root}">
+                        <TextBlock Text="your pc" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="{Binding PcCpu}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding PcGpu}" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding PcRest}" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding PcUnlocked}" FontSize="12" Foreground="{StaticResource AccentBrush}" Margin="0,12,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding PcHidden}" FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                        <Grid Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Style="{StaticResource PrimaryButton}" Content="pick for my pc" Command="{Binding PickForPcCommand}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="turns on what fits this hardware. nothing is written until you hit apply." FontSize="12" Foreground="{StaticResource FaintBrush}" VerticalAlignment="Center" Margin="14,0,0,0" TextWrapping="Wrap" />
+                        </Grid>
+                    </StackPanel>
+                    <StackPanel Margin="36,22,36,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <TextBlock Text="checks" Style="{StaticResource SectionLabel}" />
                         <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:CheckRow}">
@@ -263,7 +281,12 @@
                         </Border>
                         <TextBlock Text="{Binding Verdict}" Margin="0,22,0,0" TextWrapping="Wrap" />
                         <Button Style="{StaticResource GhostButton}" Content="{Binding ButtonText}" Command="{Binding RunCommand}" HorizontalAlignment="Left" Margin="0,18,0,0" />
-                        <TextBlock Text="30 pings each. registry &quot;network tweaks&quot; do nothing for fortnite, so aeox doesn't ship any." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,18,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="30 pings each, so run it while nothing else is downloading." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,18,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Margin="36,30,36,0" MaxWidth="680" HorizontalAlignment="Left" DataContext="{Binding DataContext, ElementName=Root}">
+                        <TextBlock Text="internet tweaks" Style="{StaticResource SectionLabel}" />
+                        <ItemsControl ItemsSource="{Binding NetworkTweaks.Items}" Focusable="False" />
+                        <TextBlock Text="only settings your adapter actually has are shown. tcp tweaks like nagle are left out on purpose: fortnite runs on udp, so they do nothing." FontSize="12" Foreground="{StaticResource FaintBrush}" Margin="0,16,0,0" TextWrapping="Wrap" />
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

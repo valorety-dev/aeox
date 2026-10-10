@@ -1,5 +1,8 @@
 using Aeox.Core.Changes;
 using Aeox.Core.Game;
+using Aeox.Core.Hardware;
+using Aeox.Core.Network;
+using Aeox.Core.Windows;
 
 namespace Aeox.Core.Tweaks;
 
@@ -13,6 +16,11 @@ public static class TweakCatalog
     {
         "sg.GlobalIlluminationQuality", "sg.ReflectionQuality", "sg.LandscapeQuality"
     };
+
+    private const string NetPlayer = "/Script/Engine.Player";
+    private const string NetDriver = "/Script/OnlineSubsystemUtils.IpNetDriver";
+    private const string Multimedia = @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
+    private const string VCachePrefs = @"HKLM\SYSTEM\CurrentControlSet\Services\amd3dvcache\Preferences";
 
     private static readonly string[] LowScalabilityGroups =
     {
@@ -29,7 +37,11 @@ public static class TweakCatalog
             ctx => new[]
             {
                 Change.Ini(ctx.Paths.GameUserSettings, Gus, "FrameRateLimit", "0.000000", $"{ctx.Hardware.FrameCapForDisplay}.000000")
-            }),
+            },
+            recommended: ctx => !ctx.Hardware.IsLaptop,
+            describe: ctx => ctx.Hardware.IsLaptop
+                ? "No FPS limit. On a laptop this means more heat and fan noise."
+                : "No FPS limit."),
 
         new("low-latency", TweakCategory.Performance,
             "Improve input latency",
@@ -51,9 +63,13 @@ public static class TweakCatalog
                 {
                     list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "bDisableMouseAcceleration", "True", "False"));
                 }
-                if (ctx.Hardware.HasNvidia) list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "LatencyTweak2", "2", "0"));
+                if (ctx.Hardware.HasNvidia) list.Add(Change.Ini(ctx.Paths.GameUserSettings, Gus, "LatencyTweak2", ctx.Hardware.IsLaptop ? "1" : "2", "0"));
                 return list;
-            }),
+            },
+            tag: ctx => ctx.Hardware.HasNvidia ? "reflex · nvidia" : null,
+            describe: ctx => ctx.Hardware.HasNvidia
+                ? ctx.Hardware.IsLaptop ? "Vsync off, raw mouse and NVIDIA Reflex. Boost stays off to keep the laptop cool." : "Vsync off, raw mouse, NVIDIA Reflex + Boost."
+                : "Vsync off and raw mouse. Reflex needs an NVIDIA card, so it is skipped."),
 
         new("low-detail-world", TweakCategory.Performance,
             "Lightweight world",
@@ -128,7 +144,8 @@ public static class TweakCatalog
                     Change.ReadOnly(ctx.Paths.Engine, true),
                     Change.ReadOnly(ctx.Paths.Input, true)
                 }
-                : new[] { Change.ReadOnly(ctx.Paths.GameUserSettings, true) }),
+                : new[] { Change.ReadOnly(ctx.Paths.GameUserSettings, true) },
+            recommended: _ => false),
 
         new("show-fps", TweakCategory.Visuals,
             "FPS counter",
@@ -137,7 +154,8 @@ public static class TweakCatalog
             ctx => new[]
             {
                 Change.Ini(ctx.Paths.GameUserSettings, Gus, "bShowFPS", "True", "False")
-            }),
+            },
+            recommended: _ => false),
 
         new("dedicated-gpu", TweakCategory.System,
             "Use the dedicated GPU",
@@ -147,7 +165,11 @@ public static class TweakCatalog
             {
                 Change.Registry(@"HKCU\Software\Microsoft\DirectX\UserGpuPreferences", ctx.GameExe!, "sz:GpuPreference=2;")
             },
-            ctx => ctx.GameExe is not null && ctx.Hardware.HasMultipleGpus),
+            ctx => ctx.GameExe is not null && ctx.Hardware.HasMultipleGpus,
+            tag: _ => "2 gpus",
+            describe: ctx => ctx.Hardware.DedicatedGpu is { } gpu
+                ? $"Fortnite always runs on your {ShortGpu(gpu)}, never the built-in graphics."
+                : "Fortnite always runs on your graphics card."),
 
         new("no-fso", TweakCategory.System,
             "Disable fullscreen optimizations",
@@ -177,7 +199,11 @@ public static class TweakCatalog
             {
                 Change.Registry(@"HKCU\System\GameConfigStore", "GameDVR_Enabled", "dword:0", "dword:1"),
                 Change.Registry(@"HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR", "AppCaptureEnabled", "dword:0")
-            }),
+            },
+            recommended: ctx => !ctx.Hardware.IsDualCcdX3D,
+            describe: ctx => ctx.Hardware.IsDualCcdX3D
+                ? "Stops background clips. Not picked for your X3D chip: AMD uses Game Bar to spot games."
+                : "Stops Game Bar from recording gameplay in the background."),
 
         new("no-mouse-acceleration", TweakCategory.System,
             "Raw mouse movement",
@@ -185,21 +211,99 @@ public static class TweakCatalog
             "\uE962",
             _ => new[]
             {
-                Change.Registry(Aeox.Core.Windows.MouseSettings.RegistryPath, "MouseSpeed", "sz:0", "sz:1"),
-                Change.Registry(Aeox.Core.Windows.MouseSettings.RegistryPath, "MouseThreshold1", "sz:0", "sz:6"),
-                Change.Registry(Aeox.Core.Windows.MouseSettings.RegistryPath, "MouseThreshold2", "sz:0", "sz:10")
+                Change.Registry(MouseSettings.RegistryPath, "MouseSpeed", "sz:0", "sz:1"),
+                Change.Registry(MouseSettings.RegistryPath, "MouseThreshold1", "sz:0", "sz:6"),
+                Change.Registry(MouseSettings.RegistryPath, "MouseThreshold2", "sz:0", "sz:10")
             }),
 
         new("power-plan", TweakCategory.System,
             "Best power plan",
-            "Balanced on X3D chips, High performance otherwise.",
+            "Balanced on X3D chips and laptops, High performance otherwise.",
             "\uE945",
             ctx => new[]
             {
-                Change.PowerPlan(ctx.Hardware.IsX3D ? Aeox.Core.Windows.PowerPlans.Balanced : Aeox.Core.Windows.PowerPlans.HighPerformance,
-                    Aeox.Core.Windows.PowerPlans.Balanced)
-            })
+                Change.PowerPlan(WantsBalanced(ctx.Hardware) ? PowerPlans.Balanced : PowerPlans.HighPerformance, PowerPlans.Balanced)
+            },
+            tag: ctx => ctx.Hardware.IsX3D ? "x3d" : ctx.Hardware.IsLaptop ? "laptop" : null,
+            describe: ctx => ctx.Hardware.IsX3D ? "Balanced, so AMD can move games onto the V-Cache cores."
+                : ctx.Hardware.IsLaptop ? "Balanced, so the laptop boosts when needed without overheating."
+                : "High performance, so the CPU never drops into power saving mid-fight."),
+
+        new("vcache-first", TweakCategory.System,
+            "Games on V-Cache cores",
+            "Windows tries the 3D V-Cache cores first, like a single-CCD X3D. Active after a restart.",
+            "\uE950",
+            _ => new[]
+            {
+                Change.Registry(VCachePrefs, "DefaultType", "dword:1", "dword:0")
+            },
+            ctx => ctx.Hardware.IsDualCcdX3D && Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\amd3dvcache") is not null,
+            tag: _ => "x3d · 2 ccds"),
+
+        new("net-rate", TweakCategory.Network,
+            "Higher game bandwidth",
+            "Lifts the game's own bandwidth cap so busy fights are not throttled on your side.",
+            "\uE839",
+            ctx => new[]
+            {
+                Change.Ini(ctx.Paths.Engine, NetPlayer, "ConfiguredInternetSpeed", "100000"),
+                Change.Ini(ctx.Paths.Engine, NetPlayer, "ConfiguredLanSpeed", "100000"),
+                Change.Ini(ctx.Paths.Engine, NetDriver, "MaxClientRate", "100000"),
+                Change.Ini(ctx.Paths.Engine, NetDriver, "MaxInternetClientRate", "100000")
+            },
+            ctx => ctx.Game.SupportsEngineTweaks),
+
+        new("no-net-throttling", TweakCategory.Network,
+            "No network throttling",
+            "Windows slows game packets while music or Discord audio plays. This turns that off. Active after a restart.",
+            "\uE9E9",
+            _ => new[]
+            {
+                Change.Registry(Multimedia, "NetworkThrottlingIndex", "dword:-1", "dword:10")
+            }),
+
+        new("adapter-power", TweakCategory.Network,
+            "Adapter power saving off",
+            "Your network adapter stays awake between packets. Reconnects for a few seconds when applied.",
+            "\uE83E",
+            ctx => AdapterChanges(ctx, NetworkAdapters.PowerSaving, true),
+            ctx => ctx.Hardware.Adapter is not null,
+            recommended: ctx => !ctx.Hardware.IsLaptop,
+            tag: ctx => AdapterTag(ctx),
+            describe: ctx => $"{ctx.Hardware.Adapter?.Name} stays awake between packets. Reconnects for a few seconds when applied."),
+
+        new("adapter-batching", TweakCategory.Network,
+            "Interrupt moderation off",
+            "Packets reach the game right away instead of in batches. Costs a little CPU. Reconnects for a few seconds.",
+            "\uE8AB",
+            ctx => AdapterChanges(ctx, NetworkAdapters.Batching, false),
+            ctx => AdapterChanges(ctx, NetworkAdapters.Batching, false).Count > 0,
+            recommended: ctx => ctx.Hardware.Threads >= 12 && !ctx.Hardware.IsLaptop,
+            tag: ctx => AdapterTag(ctx)),
+
+        new("wifi-roaming", TweakCategory.Network,
+            "Steady Wi-Fi",
+            "Stops the adapter hunting for other access points mid-match, a common cause of lag spikes every minute or so.",
+            "\uE701",
+            ctx => AdapterChanges(ctx, NetworkAdapters.Roaming, false),
+            ctx => ctx.Hardware.IsWireless && AdapterChanges(ctx, NetworkAdapters.Roaming, false).Count > 0,
+            recommended: ctx => !ctx.Hardware.IsLaptop,
+            tag: _ => "wi-fi")
     };
+
+    private static bool WantsBalanced(HardwareInfo hw) => hw.IsX3D || hw.IsLaptop;
+
+    private static string ShortGpu(string name) => name.Replace("NVIDIA ", string.Empty).Replace("(TM)", string.Empty).Replace("(R)", string.Empty).Trim();
+
+    private static string? AdapterTag(AeoxContext ctx) => ctx.Hardware.Adapter is { } a ? (a.IsWireless ? "wi-fi" : "ethernet") : null;
+
+    private static IReadOnlyList<Change> AdapterChanges(AeoxContext ctx, IEnumerable<(string Keyword, string Value)> wanted, bool includePowerOff)
+    {
+        if (ctx.Hardware.Adapter is not { } adapter) return Array.Empty<Change>();
+        var list = NetworkAdapters.Pick(adapter, wanted).ToList();
+        if (includePowerOff) list.Add(NetworkAdapters.AllowPowerOff(adapter, false));
+        return list;
+    }
 
     public static IReadOnlyList<ChoiceSetting> Choices { get; } = new List<ChoiceSetting>
     {
@@ -214,7 +318,8 @@ public static class TweakCatalog
                 Renderer("DirectX 11", "dx11", "sm5"),
                 Renderer("DirectX 12", "dx12", "sm6")
             },
-            ctx => ctx.Game.HasPerformanceMode),
+            ctx => ctx.Game.HasPerformanceMode,
+            ctx => ctx.Hardware.Tier == GpuTier.Entry ? "Performance" : null),
 
         new("window-mode", TweakCategory.Visuals,
             "Window mode",
@@ -252,7 +357,8 @@ public static class TweakCatalog
                 RenderScale(85),
                 RenderScale(75),
                 RenderScale(50)
-            })
+            },
+            recommended: ctx => ctx.Hardware.Tier == GpuTier.Entry ? "75%" : null)
     };
 
     public static IEnumerable<Tweak> For(TweakCategory category) => All.Where(t => t.Category == category);

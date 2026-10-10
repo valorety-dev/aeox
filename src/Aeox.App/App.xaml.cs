@@ -15,6 +15,11 @@ public partial class App : Application
     {
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        if (e.Args.Length == 2 && e.Args[0] == Aeox.Core.Changes.Elevation.Arg)
+        {
+            Shutdown(Aeox.Core.Changes.Elevation.RunFromFile(e.Args[1]));
+            return;
+        }
         _instance = new Mutex(true, InstanceName, out var isFirst);
         if (!isFirst)
         {
